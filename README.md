@@ -87,7 +87,7 @@ A comprehensive Flutter application for managing blood bank operations with secu
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/bloodbank.git
+   git clone https://github.com/mbilal5656/bloodbank.git
    cd bloodbank
    ```
 
