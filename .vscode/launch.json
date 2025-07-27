@@ -5,44 +5,87 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Flutter (Chrome)",
+            "name": "Flutter (Chrome) - Debug",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
-                "chrome"
-            ]
+                "chrome",
+                "--debug",
+                "--web-port=8080"
+            ],
+            "console": "debugConsole"
         },
         {
-            "name": "Flutter (Edge)",
+            "name": "Flutter (Edge) - Debug",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
-                "edge"
-            ]
+                "edge",
+                "--debug",
+                "--web-port=8081"
+            ],
+            "console": "debugConsole"
         },
         {
-            "name": "Flutter (Windows)",
+            "name": "Flutter (Windows) - Debug",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
-                "windows"
-            ]
+                "windows",
+                "--debug"
+            ],
+            "console": "debugConsole"
         },
         {
-            "name": "Flutter (Web Server)",
+            "name": "Flutter (Web Server) - Debug",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
-                "web-server"
-            ]
+                "web-server",
+                "--debug",
+                "--web-port=8082"
+            ],
+            "console": "debugConsole"
+        },
+        {
+            "name": "Flutter (Android) - Debug",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "android",
+                "--debug"
+            ],
+            "console": "debugConsole"
+        },
+        {
+            "name": "Flutter (Profile Mode)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--profile"
+            ],
+            "console": "debugConsole"
+        },
+        {
+            "name": "Flutter (Release Mode)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--release"
+            ],
+            "console": "debugConsole"
         }
     ]
 }
