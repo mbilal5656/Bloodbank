@@ -511,6 +511,26 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 const SizedBox(height: 20),
 
+                // Admin Dashboard Button (only for admins)
+                if (_userType == 'Admin') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pushNamed(context, '/admin'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3949AB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text(
+                        'Admin Dashboard',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Contact Us Button
                 SizedBox(
                   width: double.infinity,

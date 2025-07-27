@@ -19,5 +19,11 @@ void main() {
     // Verify that the splash screen displays the app title.
     expect(find.text('Blood Bank'), findsOneWidget);
     expect(find.byIcon(Icons.bloodtype), findsOneWidget);
+    
+    // Wait for the timer to complete and verify navigation
+    await tester.pumpAndSettle(const Duration(seconds: 4));
+    
+    // Verify that we've navigated to the home page
+    expect(find.text('Donate Blood, Save Lives'), findsOneWidget);
   });
 }

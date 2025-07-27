@@ -1,91 +1,45 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Flutter (Chrome) - Debug",
+            "name": "Flutter (Windows)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
-                "chrome",
-                "--debug",
-                "--web-port=8080"
-            ],
-            "console": "debugConsole"
+                "windows"
+            ]
         },
         {
-            "name": "Flutter (Edge) - Debug",
+            "name": "Flutter (Chrome)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
-                "edge",
-                "--debug",
-                "--web-port=8081"
-            ],
-            "console": "debugConsole"
+                "chrome"
+            ]
         },
         {
-            "name": "Flutter (Windows) - Debug",
+            "name": "Flutter (Edge)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
-                "windows",
-                "--debug"
-            ],
-            "console": "debugConsole"
+                "edge"
+            ]
         },
         {
-            "name": "Flutter (Web Server) - Debug",
+            "name": "Flutter (Web Server)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
-                "web-server",
-                "--debug",
-                "--web-port=8082"
-            ],
-            "console": "debugConsole"
-        },
-        {
-            "name": "Flutter (Android) - Debug",
-            "request": "launch",
-            "type": "dart",
-            "program": "lib/main.dart",
-            "args": [
-                "-d",
-                "android",
-                "--debug"
-            ],
-            "console": "debugConsole"
-        },
-        {
-            "name": "Flutter (Profile Mode)",
-            "request": "launch",
-            "type": "dart",
-            "program": "lib/main.dart",
-            "args": [
-                "--profile"
-            ],
-            "console": "debugConsole"
-        },
-        {
-            "name": "Flutter (Release Mode)",
-            "request": "launch",
-            "type": "dart",
-            "program": "lib/main.dart",
-            "args": [
-                "--release"
-            ],
-            "console": "debugConsole"
+                "web-server"
+            ]
         }
     ]
 }

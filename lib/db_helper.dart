@@ -11,16 +11,16 @@ class DatabaseHelper {
     final usersJson = prefs.getString(_usersKey);
 
     if (usersJson == null) {
-      // Create default admin user
+      // Create default admin user with specified credentials
       final adminUser = {
         'id': 1,
         'name': 'Admin',
-        'email': 'admin@bloodbank.com',
-        'password': _hashPassword('admin123'),
+        'email': 'mbilalpk56@gmail.com',
+        'password': _hashPassword('1Q2w3e5R'),
         'userType': 'Admin',
         'bloodGroup': 'N/A',
         'age': 30,
-        'contactNumber': '1234567890',
+        'contactNumber': 'N/A',
         'createdAt': DateTime.now().toIso8601String(),
       };
 
@@ -123,7 +123,12 @@ class DatabaseHelper {
 
       final userIndex = users.indexWhere((user) => user['id'] == userId);
       if (userIndex != -1) {
-        users[userIndex].addAll(userData);
+        // Handle password update specifically
+        if (userData.containsKey('password')) {
+          users[userIndex]['password'] = _hashPassword(userData['password']);
+        } else {
+          users[userIndex].addAll(userData);
+        }
         users[userIndex]['updatedAt'] = DateTime.now().toIso8601String();
 
         await prefs.setString(_usersKey, jsonEncode(users));

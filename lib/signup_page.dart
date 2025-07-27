@@ -106,9 +106,13 @@ class _SignupPageState extends State<SignupPage> {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF1A237E), Color(0xFF3949AB), Color(0xFF5C6BC0)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFE91E63), // Pink
+              Color(0xFF9C27B0), // Purple
+              Color(0xFF673AB7), // Deep Purple
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
         child: SafeArea(
@@ -185,8 +189,24 @@ class _SignupPageState extends State<SignupPage> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
                     }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
+                    if (value.length < 8) {
+                      return 'Password must be at least 8 characters';
+                    }
+                    // Check for at least one uppercase letter
+                    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                      return 'Password must contain at least one uppercase letter';
+                    }
+                    // Check for at least one lowercase letter
+                    if (!RegExp(r'[a-z]').hasMatch(value)) {
+                      return 'Password must contain at least one lowercase letter';
+                    }
+                    // Check for at least one digit
+                    if (!RegExp(r'[0-9]').hasMatch(value)) {
+                      return 'Password must contain at least one digit';
+                    }
+                    // Check for at least one special character
+                    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+                      return 'Password must contain at least one special character (!@#\$%^&*)';
                     }
                     return null;
                   },
@@ -209,6 +229,19 @@ class _SignupPageState extends State<SignupPage> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your blood group';
+                    }
+                    final validBloodGroups = [
+                      'A+',
+                      'A-',
+                      'B+',
+                      'B-',
+                      'AB+',
+                      'AB-',
+                      'O+',
+                      'O-',
+                    ];
+                    if (!validBloodGroups.contains(value.toUpperCase())) {
+                      return 'Please enter a valid blood group (A+, A-, B+, B-, AB+, AB-, O+, O-)';
                     }
                     return null;
                   },
@@ -245,11 +278,14 @@ class _SignupPageState extends State<SignupPage> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    prefixIcon: const Icon(Icons.person_outline, color: Colors.white70),
+                    prefixIcon: const Icon(
+                      Icons.person_outline,
+                      color: Colors.white70,
+                    ),
                     filled: true,
                     fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
-                  items: ['Donor', 'Receiver', 'Admin']
+                  items: ['Donor', 'Receiver']
                       .map(
                         (type) =>
                             DropdownMenuItem(value: type, child: Text(type)),
@@ -270,7 +306,10 @@ class _SignupPageState extends State<SignupPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      prefixIcon: const Icon(Icons.phone, color: Colors.white70),
+                      prefixIcon: const Icon(
+                        Icons.phone,
+                        color: Colors.white70,
+                      ),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.2),
                     ),
@@ -280,16 +319,28 @@ class _SignupPageState extends State<SignupPage> {
                           (value == null || value.isEmpty)) {
                         return 'Please enter your contact number';
                       }
+                      if (value != null && value.isNotEmpty) {
+                        // Remove spaces and special characters for validation
+                        final cleanNumber = value.replaceAll(
+                          RegExp(r'[\s\-\(\)]'),
+                          '',
+                        );
+                        if (!RegExp(
+                          r'^\+?[0-9]{10,15}$',
+                        ).hasMatch(cleanNumber)) {
+                          return 'Please enter a valid contact number (10-15 digits)';
+                        }
+                      }
                       return null;
                     },
                   ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _signup,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: Color(0xFF1A237E),
-                  ),
+                                      style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      backgroundColor: const Color(0xFFE91E63),
+                    ),
                   child: const Text(
                     'Sign Up',
                     style: TextStyle(color: Colors.white),

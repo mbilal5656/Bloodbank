@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'theme/app_theme.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -11,118 +12,119 @@ class HomePage extends StatelessWidget {
         title: const Text('Blood Bank'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.white,
+        foregroundColor: AppTheme.lightTextColor,
       ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1A237E), Color(0xFF3949AB), Color(0xFF5C6BC0)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        decoration: AppTheme.primaryGradientDecoration,
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
+              horizontal: 20.0,
+              vertical: 16.0,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 8),
+                const SizedBox(height: 20),
+                
                 // Hero Icon
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white,
+                    color: AppTheme.cardColor,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.withValues(alpha: 0.3),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.4),
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Icon(
                     Icons.bloodtype,
-                    color: const Color(0xFF1A237E),
-                    size: 40,
+                    color: AppTheme.primaryColor,
+                    size: 50,
                   ),
                 ),
-                const SizedBox(height: 16),
+                
+                const SizedBox(height: 24),
+                
                 Text(
                   'Donate Blood, Save Lives',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
+                    color: AppTheme.lightTextColor,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 6),
+                
+                const SizedBox(height: 8),
+                
                 Text(
                   'Join our community to help those in need',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.lightTextColor.withValues(alpha: 0.8),
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
+                
+                const SizedBox(height: 32),
+                
                 // Navigation Buttons
                 _HomeButton(
                   icon: Icons.login,
                   label: 'Login',
-                  color: const Color(0xFF4CAF50),
+                  color: AppTheme.successColor,
                   onTap: () => Navigator.pushNamed(context, '/login'),
                 ),
-                const SizedBox(height: 10),
+                
+                const SizedBox(height: 12),
+                
                 _HomeButton(
                   icon: Icons.person_add,
                   label: 'Sign Up',
-                  color: const Color(0xFF2196F3),
+                  color: AppTheme.infoColor,
                   onTap: () => Navigator.pushNamed(context, '/signup'),
                 ),
-                const SizedBox(height: 10),
+                
+                const SizedBox(height: 12),
+                
                 _HomeButton(
                   icon: Icons.contact_support,
                   label: 'Contact Us',
-                  color: const Color(0xFFFF9800),
+                  color: AppTheme.warningColor,
                   onTap: () => Navigator.pushNamed(context, '/contact'),
                 ),
-                const SizedBox(height: 16),
-                // New Features Section
+                
+                const SizedBox(height: 24),
+                
+                // Quick Features Section
                 Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
+                  padding: const EdgeInsets.all(20),
+                  decoration: AppTheme.glassDecoration,
                   child: Column(
                     children: [
                       Text(
                         'Quick Features',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.lightTextColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      
+                      const SizedBox(height: 16),
+                      
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _FeatureCard(
                             icon: Icons.bloodtype,
                             label: 'Check\nAvailability',
-                            onTap: () =>
-                                Navigator.pushNamed(context, '/receiver'),
+                            onTap: () => Navigator.pushNamed(context, '/receiver'),
                           ),
                           _FeatureCard(
                             icon: Icons.volunteer_activism,
@@ -139,16 +141,19 @@ class HomePage extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                
+                const SizedBox(height: 20),
+                
                 Text(
                   '"The gift of blood is the gift of life."',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white60,
+                    color: AppTheme.lightTextColor.withValues(alpha: 0.6),
                     fontStyle: FontStyle.italic,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -193,17 +198,23 @@ class _HomeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 42,
+      height: 50,
       child: ElevatedButton.icon(
-        icon: Icon(icon, size: 18, color: Colors.white),
+        icon: Icon(icon, size: 20, color: AppTheme.lightTextColor),
         label: Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 16, 
+            fontWeight: FontWeight.bold,
+            color: AppTheme.lightTextColor,
+          ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: color ?? const Color(0xFF1A237E),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          backgroundColor: color ?? AppTheme.primaryColor,
+          foregroundColor: AppTheme.lightTextColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 3,
         ),
         onPressed: onTap,
@@ -228,22 +239,30 @@ class _FeatureCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 70,
-        padding: const EdgeInsets.all(6),
+        width: 80,
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(8),
+          color: AppTheme.cardColor.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppTheme.cardColor.withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(height: 3),
+            Icon(
+              icon, 
+              color: AppTheme.lightTextColor, 
+              size: 24,
+            ),
+            const SizedBox(height: 6),
             Text(
               label,
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 9,
+                color: AppTheme.lightTextColor,
+                fontSize: 10,
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,

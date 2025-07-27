@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'theme/app_theme.dart';
 
 class ContactPage extends StatefulWidget {
   const ContactPage({super.key});
@@ -38,7 +39,7 @@ class _ContactPageState extends State<ContactPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Could not launch email app'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.errorColor,
           ),
         );
       }
@@ -54,7 +55,7 @@ class _ContactPageState extends State<ContactPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Could not launch phone app'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.errorColor,
           ),
         );
       }
@@ -72,7 +73,7 @@ class _ContactPageState extends State<ContactPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Could not launch map app'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.errorColor,
           ),
         );
       }
@@ -92,7 +93,7 @@ class _ContactPageState extends State<ContactPage> {
             content: Text(
               "Message sent successfully! We'll get back to you soon.",
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: AppTheme.successColor,
           ),
         );
         _nameController.clear();
@@ -104,8 +105,8 @@ class _ContactPageState extends State<ContactPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error sending message: \\${e.toString()}'),
-            backgroundColor: Colors.red,
+            content: Text('Error sending message: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
           ),
         );
       }
@@ -123,18 +124,12 @@ class _ContactPageState extends State<ContactPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Contact Us'),
-        backgroundColor: const Color(0xFF1A237E),
+        backgroundColor: AppTheme.primaryColor,
       ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1A237E), Color(0xFF3949AB), Color(0xFF5C6BC0)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        decoration: AppTheme.primaryGradientDecoration,
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(
@@ -144,258 +139,320 @@ class _ContactPageState extends State<ContactPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.contact_support,
-                        size: 80,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Get in Touch',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'We are here to help you. Reach out for any queries or support.',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                        textAlign: TextAlign.center,
+                // Header Section
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.cardColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        spreadRadius: 5,
                       ),
                     ],
                   ),
+                  child: Icon(
+                    Icons.contact_support,
+                    size: 50,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
+                
                 const SizedBox(height: 24),
-                Card(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  child: ListTile(
-                    leading: Icon(Icons.email, color: Colors.white),
-                    title: const Text(
-                      'Email',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    subtitle: const Text(
-                      'mbilalpk56@gmail.com',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: _launchEmail,
-                      tooltip: 'Send Email',
-                    ),
+                
+                Text(
+                  'Get in Touch',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.lightTextColor,
                   ),
                 ),
-                Card(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  child: ListTile(
-                    leading: Icon(Icons.phone, color: Colors.white),
-                    title: const Text(
-                      'Phone',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    subtitle: const Text(
-                      '03216412855',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.call, color: Colors.white),
-                      onPressed: _launchPhone,
-                      tooltip: 'Call',
-                    ),
+                
+                const SizedBox(height: 8),
+                
+                Text(
+                  'We are here to help you. Reach out for any queries or support.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.lightTextColor.withValues(alpha: 0.8),
                   ),
+                  textAlign: TextAlign.center,
                 ),
-                Card(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  child: ListTile(
-                    leading: Icon(Icons.location_on, color: Colors.white),
-                    title: const Text(
-                      'Address',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    subtitle: const Text(
-                      '123 Main Street\nCity, State 12345',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.map, color: Colors.white),
-                      onPressed: _launchMap,
-                      tooltip: 'Open in Maps',
-                    ),
-                  ),
+                
+                const SizedBox(height: 32),
+                
+                // Contact Information Cards
+                _ContactCard(
+                  icon: Icons.email,
+                  title: 'Email',
+                  subtitle: 'mbilalpk56@gmail.com',
+                  actionIcon: Icons.send,
+                  actionLabel: 'Send Email',
+                  onAction: _launchEmail,
                 ),
-                Card(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  child: ListTile(
-                    leading: Icon(Icons.access_time, color: Colors.white),
-                    title: const Text(
-                      'Operating Hours',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    subtitle: const Text(
-                      'Mon-Fri: 9am - 6pm\nSat: 10am - 4pm',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ),
+                
+                _ContactCard(
+                  icon: Icons.phone,
+                  title: 'Phone',
+                  subtitle: '03216412855',
+                  actionIcon: Icons.call,
+                  actionLabel: 'Call',
+                  onAction: _launchPhone,
                 ),
-                const SizedBox(height: 24),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Name',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.2),
-                          labelStyle: const TextStyle(color: Colors.white),
-                        ),
-                        style: const TextStyle(color: Colors.white),
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Please enter your name'
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.email,
-                            color: Colors.white,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.2),
-                          labelStyle: const TextStyle(color: Colors.white),
-                        ),
-                        style: const TextStyle(color: Colors.white),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Please enter your email'
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _subjectController,
-                        decoration: InputDecoration(
-                          labelText: 'Subject',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.subject,
-                            color: Colors.white,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.2),
-                          labelStyle: const TextStyle(color: Colors.white),
-                        ),
-                        style: const TextStyle(color: Colors.white),
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Please enter a subject'
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          labelText: 'Message',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.message,
-                            color: Colors.white,
-                          ),
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.2),
-                          labelStyle: const TextStyle(color: Colors.white),
-                        ),
-                        style: const TextStyle(color: Colors.white),
-                        maxLines: 3,
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Please enter your message'
-                            : null,
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.send),
-                          label: _isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                              : const Text('Send Message'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1A237E),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          onPressed: _isLoading ? null : _submitForm,
-                        ),
-                      ),
-                    ],
-                  ),
+                
+                _ContactCard(
+                  icon: Icons.location_on,
+                  title: 'Address',
+                  subtitle: '123 Main Street\nCity, State 12345',
+                  actionIcon: Icons.map,
+                  actionLabel: 'Open in Maps',
+                  onAction: _launchMap,
                 ),
-                const SizedBox(height: 24),
-                Card(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
+                
+                _ContactCard(
+                  icon: Icons.access_time,
+                  title: 'Operating Hours',
+                  subtitle: 'Mon-Fri: 9am - 6pm\nSat: 10am - 4pm',
+                  actionIcon: null,
+                  actionLabel: null,
+                  onAction: null,
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Contact Form
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: AppTheme.glassDecoration,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.emergency, color: Colors.white),
-                        const SizedBox(width: 8),
                         Text(
-                          'Emergency Contact:',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '+92 321 6412855',
-                          style: const TextStyle(
-                            fontSize: 18,
+                          'Send us a Message',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: AppTheme.lightTextColor,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 20),
+                        
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: InputDecoration(
+                            labelText: 'Name',
+                            prefixIcon: const Icon(Icons.person),
+                            filled: true,
+                            fillColor: AppTheme.cardColor,
+                          ),
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Please enter your name'
+                              : null,
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: const Icon(Icons.email),
+                            filled: true,
+                            fillColor: AppTheme.cardColor,
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        TextFormField(
+                          controller: _subjectController,
+                          decoration: InputDecoration(
+                            labelText: 'Subject',
+                            prefixIcon: const Icon(Icons.subject),
+                            filled: true,
+                            fillColor: AppTheme.cardColor,
+                          ),
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Please enter a subject'
+                              : null,
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        TextFormField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            labelText: 'Message',
+                            prefixIcon: const Icon(Icons.message),
+                            filled: true,
+                            fillColor: AppTheme.cardColor,
+                          ),
+                          maxLines: 4,
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Please enter your message'
+                              : null,
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.send),
+                            label: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppTheme.lightTextColor,
+                                      ),
+                                    ),
+                                  )
+                                : const Text('Send Message'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: AppTheme.lightTextColor,
+                            ),
+                            onPressed: _isLoading ? null : _submitForm,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
+                
+                const SizedBox(height: 24),
+                
+                // Emergency Contact
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: AppTheme.glassDecoration,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.emergency,
+                        color: AppTheme.lightTextColor,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Emergency Contact:',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.lightTextColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '+92 321 6412855',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.lightTextColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ContactCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final IconData? actionIcon;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _ContactCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.actionIcon,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: AppTheme.glassDecoration,
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: AppTheme.lightTextColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.lightTextColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.lightTextColor.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (actionIcon != null && actionLabel != null && onAction != null)
+            IconButton(
+              icon: Icon(actionIcon, color: AppTheme.lightTextColor),
+              onPressed: onAction,
+              tooltip: actionLabel,
+            ),
+        ],
       ),
     );
   }
