@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
 import 'session_manager.dart';
+import 'main.dart' show UserSession;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -24,15 +25,15 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _login() async {
     if (!mounted) return;
-    
+
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
-    
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -51,19 +52,21 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (!isAuthenticated) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid credentials')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Invalid credentials')));
         return;
       }
 
       // Get user data
-      final user = await DatabaseHelper().getUserByEmail(_emailController.text.trim());
+      final user = await DatabaseHelper().getUserByEmail(
+        _emailController.text.trim(),
+      );
       if (user == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User not found')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('User not found')));
         return;
       }
 
@@ -76,15 +79,19 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Save user session
-      await SessionManager.saveUserSession(
-        userId: user['id'],
-        email: user['email'],
-        userType: user['userType'],
-        userName: user['name'],
-      );
+             // Save user session
+       await SessionManager.saveUserSession(
+         userId: user['id'],
+         email: user['email'],
+         userType: user['userType'],
+         userName: user['name'],
+       );
 
-      // Determine route based on user type
+       // Set UserSession for backward compatibility
+       UserSession.userType = user['userType'];
+       UserSession.email = user['email'];
+
+       // Determine route based on user type
       String route;
       switch (_userType) {
         case 'Donor':
@@ -101,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (!mounted) return;
-      
+
       Navigator.pushReplacementNamed(context, route);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -129,43 +136,44 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.red[50],
-      appBar: AppBar(
-        title: const Text('Login'),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1A237E), Color(0xFF3949AB), Color(0xFF5C6BC0)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 32.0,
+            ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // App Logo/Icon
-                Icon(
-                  Icons.bloodtype,
-                  size: 80,
-                  color: Colors.red[700],
-                ),
+                Icon(Icons.bloodtype, size: 80, color: Colors.white),
                 const SizedBox(height: 20),
                 Text(
                   'Welcome Back',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.red[700],
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Sign in to your account',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Email Field
                 TextFormField(
                   controller: _emailController,
@@ -174,24 +182,25 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    prefixIcon: const Icon(Icons.email),
+                    prefixIcon: const Icon(Icons.email, color: Colors.white70),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                        .hasMatch(value)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Password Field
                 TextFormField(
                   controller: _passwordController,
@@ -200,9 +209,9 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    prefixIcon: const Icon(Icons.lock),
+                    prefixIcon: const Icon(Icons.lock, color: Colors.white70),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   obscureText: true,
                   validator: (value) {
@@ -216,7 +225,7 @@ class _LoginPageState extends State<LoginPage> {
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // User Type Dropdown
                 DropdownButtonFormField<String>(
                   value: _userType,
@@ -225,15 +234,23 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    prefixIcon: const Icon(Icons.person_outline),
+                    prefixIcon: const Icon(
+                      Icons.person_outline,
+                      color: Colors.white70,
+                    ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   items: ['Donor', 'Receiver', 'Admin']
-                      .map((type) => DropdownMenuItem(
-                            value: type,
-                            child: Text(type),
-                          ))
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(
+                            type,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     setState(() {
@@ -242,7 +259,7 @@ class _LoginPageState extends State<LoginPage> {
                   },
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Login Button
                 SizedBox(
                   width: double.infinity,
@@ -250,7 +267,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[700],
+                      backgroundColor: Color(0xFF1A237E),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -263,7 +280,9 @@ class _LoginPageState extends State<LoginPage> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
@@ -276,21 +295,21 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Sign Up Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       'Don\'t have an account? ',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: Colors.white70),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pushNamed(context, '/signup'),
                       child: Text(
                         'Sign Up',
                         style: TextStyle(
-                          color: Colors.red[700],
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -298,27 +317,28 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Forgot Password Link
                 TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/forgot-password'),
                   child: Text(
                     'Forgot Password?',
                     style: TextStyle(
-                      color: Colors.red[700],
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Contact Us Link
                 TextButton(
                   onPressed: () => Navigator.pushNamed(context, '/contact'),
                   child: Text(
                     'Contact Us',
                     style: TextStyle(
-                      color: Colors.red[700],
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

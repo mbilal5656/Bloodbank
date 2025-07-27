@@ -30,7 +30,7 @@ class _SignupPageState extends State<SignupPage> {
 
   Future<void> _signup() async {
     if (!mounted) return;
-    
+
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _passwordController.text.isEmpty ||
@@ -38,22 +38,24 @@ class _SignupPageState extends State<SignupPage> {
         _ageController.text.isEmpty ||
         (_userType != 'Admin' && _contactController.text.isEmpty)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
-    
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     try {
       // Check if email already exists
-      final existingUser = await DatabaseHelper().getUserByEmail(_emailController.text.trim());
-      
+      final existingUser = await DatabaseHelper().getUserByEmail(
+        _emailController.text.trim(),
+      );
+
       if (!mounted) return;
-      
+
       if (existingUser != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Email already registered')),
@@ -69,14 +71,18 @@ class _SignupPageState extends State<SignupPage> {
         'userType': _userType,
         'bloodGroup': _bloodGroupController.text.trim(),
         'age': int.tryParse(_ageController.text) ?? 0,
-        'contactNumber': _userType == 'Admin' ? '' : _contactController.text.trim(),
+        'contactNumber': _userType == 'Admin'
+            ? ''
+            : _contactController.text.trim(),
       });
-      
+
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Account created successfully! Welcome, ${_nameController.text}!'),
+          content: Text(
+            'Account created successfully! Welcome, ${_nameController.text}!',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -95,15 +101,24 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.red[50],
-      appBar: AppBar(title: const Text('Sign Up')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1A237E), Color(0xFF3949AB), Color(0xFF5C6BC0)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
           child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 32.0,
+            ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   'Create Account',
@@ -112,10 +127,14 @@ class _SignupPageState extends State<SignupPage> {
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Full Name',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.person, color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -127,18 +146,23 @@ class _SignupPageState extends State<SignupPage> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.email, color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                        .hasMatch(value)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -147,10 +171,14 @@ class _SignupPageState extends State<SignupPage> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Password',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.lock, color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   obscureText: true,
                   validator: (value) {
@@ -166,10 +194,17 @@ class _SignupPageState extends State<SignupPage> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _bloodGroupController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Blood Group (e.g., A+)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.bloodtype),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.bloodtype,
+                      color: Colors.white70,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -181,10 +216,14 @@ class _SignupPageState extends State<SignupPage> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _ageController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Age',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.cake),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.cake, color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
@@ -201,16 +240,20 @@ class _SignupPageState extends State<SignupPage> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: _userType,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'User Type',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.person_outline, color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   items: ['Donor', 'Receiver', 'Admin']
-                      .map((type) => DropdownMenuItem(
-                            value: type,
-                            child: Text(type),
-                          ))
+                      .map(
+                        (type) =>
+                            DropdownMenuItem(value: type, child: Text(type)),
+                      )
                       .toList(),
                   onChanged: (value) {
                     setState(() {
@@ -222,14 +265,19 @@ class _SignupPageState extends State<SignupPage> {
                 if (_userType != 'Admin')
                   TextFormField(
                     controller: _contactController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Contact Number',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.phone),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.phone, color: Colors.white70),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.2),
                     ),
                     keyboardType: TextInputType.phone,
                     validator: (value) {
-                      if (_userType != 'Admin' && (value == null || value.isEmpty)) {
+                      if (_userType != 'Admin' &&
+                          (value == null || value.isEmpty)) {
                         return 'Please enter your contact number';
                       }
                       return null;
@@ -240,13 +288,20 @@ class _SignupPageState extends State<SignupPage> {
                   onPressed: _signup,
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 50),
+                    backgroundColor: Color(0xFF1A237E),
                   ),
-                  child: const Text('Sign Up'),
+                  child: const Text(
+                    'Sign Up',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextButton(
                   onPressed: () => Navigator.pushNamed(context, '/login'),
-                  child: const Text('Already have an account? Login'),
+                  child: const Text(
+                    'Already have an account? Login',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                 ),
               ],
             ),

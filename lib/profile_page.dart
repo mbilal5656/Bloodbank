@@ -16,13 +16,13 @@ class _ProfilePageState extends State<ProfilePage> {
   final _bloodGroupController = TextEditingController();
   final _ageController = TextEditingController();
   final _contactController = TextEditingController();
-  
+
   final _oldPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   final _passwordFormKey = GlobalKey<FormState>();
-  
+
   bool _isLoading = true;
   bool _isEditing = false;
   bool _isChangingPassword = false;
@@ -53,7 +53,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (session != null) {
       final userId = session['userId'] as int;
       final userData = await DatabaseHelper().getUserById(userId);
-      
+
       if (userData != null) {
         setState(() {
           _userData = userData;
@@ -132,7 +132,7 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() {
           _isChangingPassword = false;
         });
-        
+
         // Clear password fields
         _oldPasswordController.clear();
         _newPasswordController.clear();
@@ -178,303 +178,191 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      backgroundColor: Colors.red[50],
       appBar: AppBar(
         title: const Text('Profile'),
-        actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => setState(() => _isEditing = true),
-              tooltip: 'Edit Profile',
-            ),
-        ],
+        backgroundColor: const Color(0xFF1A237E),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1A237E), Color(0xFF3949AB), Color(0xFF5C6BC0)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 32.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Profile Section
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.red[100],
-                            child: Icon(
-                              _userType == 'Donor' 
-                                  ? Icons.volunteer_activism
-                                  : _userType == 'Receiver'
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 40,
+                                backgroundColor: Colors.red[100],
+                                child: Icon(
+                                  _userType == 'Donor'
+                                      ? Icons.volunteer_activism
+                                      : _userType == 'Receiver'
                                       ? Icons.person
                                       : Icons.admin_panel_settings,
-                              size: 40,
-                              color: Colors.red[700],
+                                  size: 40,
+                                  color: Colors.red[700],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _userData?['name'] ?? 'User',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.headlineSmall,
+                                    ),
+                                    Text(
+                                      _userType ?? 'User',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Name Field
+                          TextFormField(
+                            controller: _nameController,
+                            enabled: _isEditing,
+                            decoration: const InputDecoration(
+                              labelText: 'Full Name',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.person),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your name';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Email Field (Read-only)
+                          TextFormField(
+                            controller: _emailController,
+                            enabled: false,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.email),
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _userData?['name'] ?? 'User',
-                                  style: Theme.of(context).textTheme.headlineSmall,
-                                ),
-                                Text(
-                                  _userType ?? 'User',
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(height: 16),
+
+                          // Blood Group Field
+                          TextFormField(
+                            controller: _bloodGroupController,
+                            enabled: _isEditing,
+                            decoration: const InputDecoration(
+                              labelText: 'Blood Group',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.bloodtype),
                             ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your blood group';
+                              }
+                              return null;
+                            },
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // Name Field
-                      TextFormField(
-                        controller: _nameController,
-                        enabled: _isEditing,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Name',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.person),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Email Field (Read-only)
-                      TextFormField(
-                        controller: _emailController,
-                        enabled: false,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.email),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Blood Group Field
-                      TextFormField(
-                        controller: _bloodGroupController,
-                        enabled: _isEditing,
-                        decoration: const InputDecoration(
-                          labelText: 'Blood Group',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.bloodtype),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your blood group';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Age Field
-                      TextFormField(
-                        controller: _ageController,
-                        enabled: _isEditing,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Age',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.cake),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your age';
-                          }
-                          final age = int.tryParse(value);
-                          if (age == null || age < 1 || age > 120) {
-                            return 'Please enter a valid age';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Contact Field
-                      TextFormField(
-                        controller: _contactController,
-                        enabled: _isEditing,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          labelText: 'Contact Number',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.phone),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your contact number';
-                          }
-                          return null;
-                        },
-                      ),
-                      
-                      if (_isEditing) ...[
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: _saveProfile,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('Save Changes'),
-                              ),
+                          const SizedBox(height: 16),
+
+                          // Age Field
+                          TextFormField(
+                            controller: _ageController,
+                            enabled: _isEditing,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Age',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.cake),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () {
-                                  setState(() => _isEditing = false);
-                                  _loadUserData(); // Reset to original values
-                                },
-                                child: const Text('Cancel'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Change Password Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.lock, color: Colors.blue),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Change Password',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const Spacer(),
-                        if (!_isChangingPassword)
-                          TextButton(
-                            onPressed: () => setState(() => _isChangingPassword = true),
-                            child: const Text('Change'),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your age';
+                              }
+                              final age = int.tryParse(value);
+                              if (age == null || age < 1 || age > 120) {
+                                return 'Please enter a valid age';
+                              }
+                              return null;
+                            },
                           ),
-                      ],
-                    ),
-                    
-                    if (_isChangingPassword) ...[
-                      const SizedBox(height: 16),
-                      Form(
-                        key: _passwordFormKey,
-                        child: Column(
-                          children: [
-                            TextFormField(
-                              controller: _oldPasswordController,
-                              obscureText: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Current Password',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.lock_outline),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your current password';
-                                }
-                                return null;
-                              },
+                          const SizedBox(height: 16),
+
+                          // Contact Field
+                          TextFormField(
+                            controller: _contactController,
+                            enabled: _isEditing,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              labelText: 'Contact Number',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.phone),
                             ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _newPasswordController,
-                              obscureText: true,
-                              decoration: const InputDecoration(
-                                labelText: 'New Password',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.lock),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter a new password';
-                                }
-                                if (value.length < 6) {
-                                  return 'Password must be at least 6 characters';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _confirmPasswordController,
-                              obscureText: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Confirm New Password',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.lock),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please confirm your new password';
-                                }
-                                if (value != _newPasswordController.text) {
-                                  return 'Passwords do not match';
-                                }
-                                return null;
-                              },
-                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your contact number';
+                              }
+                              return null;
+                            },
+                          ),
+
+                          if (_isEditing) ...[
                             const SizedBox(height: 20),
                             Row(
                               children: [
                                 Expanded(
                                   child: ElevatedButton(
-                                    onPressed: _changePassword,
+                                    onPressed: _saveProfile,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
+                                      backgroundColor: const Color(0xFF1A237E),
                                       foregroundColor: Colors.white,
                                     ),
-                                    child: const Text('Update Password'),
+                                    child: const Text('Save Changes'),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: OutlinedButton(
                                     onPressed: () {
-                                      setState(() => _isChangingPassword = false);
-                                      _oldPasswordController.clear();
-                                      _newPasswordController.clear();
-                                      _confirmPasswordController.clear();
+                                      setState(() => _isEditing = false);
+                                      _loadUserData(); // Reset to original values
                                     },
                                     child: const Text('Cancel'),
                                   ),
@@ -482,46 +370,182 @@ class _ProfilePageState extends State<ProfilePage> {
                               ],
                             ),
                           ],
-                        ),
+                        ],
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Contact Us Button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => Navigator.pushNamed(context, '/contact'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.blue,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+
+                const SizedBox(height: 20),
+
+                // Change Password Section
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.lock, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Change Password',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(color: Colors.white),
+                            ),
+                            const Spacer(),
+                            if (!_isChangingPassword)
+                              TextButton(
+                                onPressed: () =>
+                                    setState(() => _isChangingPassword = true),
+                                child: const Text(
+                                  'Change',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        if (_isChangingPassword) ...[
+                          const SizedBox(height: 16),
+                          Form(
+                            key: _passwordFormKey,
+                            child: Column(
+                              children: [
+                                TextFormField(
+                                  controller: _oldPasswordController,
+                                  obscureText: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Current Password',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.lock_outline),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your current password';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _newPasswordController,
+                                  obscureText: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'New Password',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.lock),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter a new password';
+                                    }
+                                    if (value.length < 6) {
+                                      return 'Password must be at least 6 characters';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _confirmPasswordController,
+                                  obscureText: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Confirm New Password',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.lock),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please confirm your new password';
+                                    }
+                                    if (value != _newPasswordController.text) {
+                                      return 'Passwords do not match';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: _changePassword,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFF3949AB,
+                                          ),
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        child: const Text('Update Password'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () {
+                                          setState(
+                                            () => _isChangingPassword = false,
+                                          );
+                                          _oldPasswordController.clear();
+                                          _newPasswordController.clear();
+                                          _confirmPasswordController.clear();
+                                        },
+                                        child: const Text(
+                                          'Cancel',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-                child: const Text('Contact Us'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Logout Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _logout,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+
+                const SizedBox(height: 20),
+
+                // Contact Us Button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pushNamed(context, '/contact'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text(
+                      'Contact Us',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
                 ),
-                child: const Text('Logout'),
-              ),
+                const SizedBox(height: 16),
+
+                // Logout Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _logout,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('Logout'),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
-} 
+}

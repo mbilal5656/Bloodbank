@@ -138,28 +138,37 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.red[50],
       appBar: AppBar(
         title: const Text('Forgot Password'),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFF1A237E),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1A237E), Color(0xFF3949AB), Color(0xFF5C6BC0)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 32.0,
+            ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // App Logo/Icon
-                Icon(Icons.lock_reset, size: 80, color: Colors.red[700]),
+                Icon(Icons.lock_reset, size: 80, color: Colors.white),
                 const SizedBox(height: 20),
                 Text(
                   'Reset Your Password',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.red[700],
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -167,7 +176,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   'Enter your email to reset your password',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -181,9 +190,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    prefixIcon: const Icon(Icons.email),
+                    prefixIcon: const Icon(Icons.email, color: Colors.white),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -208,7 +217,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _sendResetEmail,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[700],
+                        backgroundColor: const Color(0xFF1A237E),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -244,9 +253,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      prefixIcon: const Icon(Icons.lock),
+                      prefixIcon: const Icon(Icons.lock, color: Colors.white),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Colors.white.withValues(alpha: 0.2),
                     ),
                     obscureText: true,
                     validator: (value) {
@@ -269,9 +278,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      prefixIcon: const Icon(Icons.lock),
+                      prefixIcon: const Icon(Icons.lock, color: Colors.white),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Colors.white.withValues(alpha: 0.2),
                     ),
                     obscureText: true,
                     validator: (value) {
@@ -293,7 +302,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _resetPassword,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green[700],
+                        backgroundColor: const Color(0xFF3949AB),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -331,7 +340,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   child: Text(
                     'Back to Login',
                     style: TextStyle(
-                      color: Colors.red[700],
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

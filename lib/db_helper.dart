@@ -1,212 +1,199 @@
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DatabaseHelper {
-  static final DatabaseHelper _instance = DatabaseHelper._internal();
-  static Database? _database;
+  static const String _usersKey = 'users';
+  static const String _nextIdKey = 'next_user_id';
 
-  factory DatabaseHelper() => _instance;
-  DatabaseHelper._internal();
+  // Initialize database with default admin user
+  static Future<void> initializeDatabase() async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDatabase();
-    return _database!;
-  }
+    if (usersJson == null) {
+      // Create default admin user
+      final adminUser = {
+        'id': 1,
+        'name': 'Admin',
+        'email': 'admin@bloodbank.com',
+        'password': _hashPassword('admin123'),
+        'userType': 'Admin',
+        'bloodGroup': 'N/A',
+        'age': 30,
+        'contactNumber': '1234567890',
+        'createdAt': DateTime.now().toIso8601String(),
+      };
 
-  Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'bloodbank.db');
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _onCreate,
-    );
-  }
-
-  Future<void> _onCreate(Database db, int version) async {
-    // Users table
-    await db.execute('''
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        userType TEXT NOT NULL,
-        bloodGroup TEXT,
-        age INTEGER,
-        contactNumber TEXT,
-        createdAt TEXT NOT NULL
-      )
-    ''');
-
-    // Blood inventory table
-    await db.execute('''
-      CREATE TABLE blood_inventory (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        bloodType TEXT UNIQUE NOT NULL,
-        units INTEGER NOT NULL,
-        lastUpdated TEXT NOT NULL
-      )
-    ''');
-
-    // Insert default admin user
-    await db.insert('users', {
-      'name': 'Admin',
-      'email': 'admin@bloodbank.com',
-      'password': _hashPassword('admin123'),
-      'userType': 'Admin',
-      'bloodGroup': 'N/A',
-      'age': 30,
-      'contactNumber': '1234567890',
-      'createdAt': DateTime.now().toIso8601String(),
-    });
-
-    // Insert default blood inventory
-    final bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-    final units = [10, 5, 8, 3, 4, 2, 12, 6];
-    
-    for (int i = 0; i < bloodTypes.length; i++) {
-      await db.insert('blood_inventory', {
-        'bloodType': bloodTypes[i],
-        'units': units[i],
-        'lastUpdated': DateTime.now().toIso8601String(),
-      });
+      final users = [adminUser];
+      await prefs.setString(_usersKey, jsonEncode(users));
+      await prefs.setInt(_nextIdKey, 2);
     }
   }
 
-  // Password hashing
-  String _hashPassword(String password) {
-    var bytes = utf8.encode(password);
-    var digest = sha256.convert(bytes);
-    return digest.toString();
+  // Hash password using simple base64 encoding (in production, use proper hashing)
+  static String _hashPassword(String password) {
+    return base64Encode(utf8.encode(password));
   }
 
-  // User CRUD operations
-  Future<int> insertUser(Map<String, dynamic> user) async {
-    final db = await database;
-    user['password'] = _hashPassword(user['password']);
-    user['createdAt'] = DateTime.now().toIso8601String();
-    return await db.insert('users', user);
-  }
-
+  // Get all users
   Future<List<Map<String, dynamic>>> getAllUsers() async {
-    final db = await database;
-    return await db.query('users', orderBy: 'createdAt DESC');
+    final prefs = await SharedPreferences.getInstance();
+    final usersJson = prefs.getString(_usersKey);
+
+    if (usersJson != null) {
+      final List<dynamic> decoded = jsonDecode(usersJson);
+      return decoded.cast<Map<String, dynamic>>();
+    }
+    return [];
   }
 
+  // Get user by email
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
-    final db = await database;
-    final results = await db.query(
-      'users',
-      where: 'email = ?',
-      whereArgs: [email],
-    );
-    return results.isNotEmpty ? results.first : null;
+    final users = await getAllUsers();
+    try {
+      return users.firstWhere((user) => user['email'] == email);
+    } catch (e) {
+      return null;
+    }
   }
 
-  Future<Map<String, dynamic>?> getUserById(int id) async {
-    final db = await database;
-    final results = await db.query(
-      'users',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    return results.isNotEmpty ? results.first : null;
+  // Get user by ID
+  Future<Map<String, dynamic>?> getUserById(int userId) async {
+    final users = await getAllUsers();
+    try {
+      return users.firstWhere((user) => user['id'] == userId);
+    } catch (e) {
+      return null;
+    }
   }
 
+  // Authenticate user
   Future<bool> authenticateUser(String email, String password) async {
     final user = await getUserByEmail(email);
-    if (user == null) return false;
-    return user['password'] == _hashPassword(password);
-  }
-
-  Future<int> updateUser(int id, Map<String, dynamic> userData) async {
-    final db = await database;
-    if (userData.containsKey('password')) {
-      userData['password'] = _hashPassword(userData['password']);
+    if (user != null) {
+      final hashedPassword = _hashPassword(password);
+      return user['password'] == hashedPassword;
     }
-    return await db.update(
-      'users',
-      userData,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return false;
   }
 
-  Future<int> deleteUser(int id) async {
-    final db = await database;
-    return await db.delete(
-      'users',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
+  // Insert new user
+  Future<bool> insertUser(Map<String, dynamic> userData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final users = await getAllUsers();
 
-  Future<bool> changePassword(int userId, String oldPassword, String newPassword) async {
-    final user = await getUserById(userId);
-    if (user == null) return false;
-    
-    if (user['password'] != _hashPassword(oldPassword)) {
+      // Get next user ID
+      final nextId = prefs.getInt(_nextIdKey) ?? users.length + 1;
+
+      // Hash password
+      final hashedPassword = _hashPassword(userData['password']);
+
+      // Create new user
+      final newUser = {
+        'id': nextId,
+        'name': userData['name'],
+        'email': userData['email'],
+        'password': hashedPassword,
+        'userType': userData['userType'],
+        'bloodGroup': userData['bloodGroup'],
+        'age': userData['age'],
+        'contactNumber': userData['contactNumber'],
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+
+      users.add(newUser);
+
+      // Save updated users list
+      await prefs.setString(_usersKey, jsonEncode(users));
+      await prefs.setInt(_nextIdKey, nextId + 1);
+
+      return true;
+    } catch (e) {
+      // In production, use proper logging instead of print
       return false;
     }
-
-    await updateUser(userId, {'password': newPassword});
-    return true;
   }
 
-  // Blood inventory CRUD operations
-  Future<List<Map<String, dynamic>>> getAllBloodInventory() async {
-    final db = await database;
-    return await db.query('blood_inventory', orderBy: 'bloodType');
+  // Update user
+  Future<bool> updateUser(int userId, Map<String, dynamic> userData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final users = await getAllUsers();
+
+      final userIndex = users.indexWhere((user) => user['id'] == userId);
+      if (userIndex != -1) {
+        users[userIndex].addAll(userData);
+        users[userIndex]['updatedAt'] = DateTime.now().toIso8601String();
+
+        await prefs.setString(_usersKey, jsonEncode(users));
+        return true;
+      }
+      return false;
+    } catch (e) {
+      // In production, use proper logging instead of print
+      return false;
+    }
   }
 
-  Future<Map<String, dynamic>?> getBloodInventoryByType(String bloodType) async {
-    final db = await database;
-    final results = await db.query(
-      'blood_inventory',
-      where: 'bloodType = ?',
-      whereArgs: [bloodType],
-    );
-    return results.isNotEmpty ? results.first : null;
+  // Delete user
+  Future<bool> deleteUser(int userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final users = await getAllUsers();
+
+      users.removeWhere((user) => user['id'] == userId);
+
+      await prefs.setString(_usersKey, jsonEncode(users));
+      return true;
+    } catch (e) {
+      // In production, use proper logging instead of print
+      return false;
+    }
   }
 
-  Future<int> updateBloodInventory(String bloodType, int units) async {
-    final db = await database;
-    return await db.update(
-      'blood_inventory',
-      {
-        'units': units,
-        'lastUpdated': DateTime.now().toIso8601String(),
-      },
-      where: 'bloodType = ?',
-      whereArgs: [bloodType],
-    );
+  // Get users by type
+  Future<List<Map<String, dynamic>>> getUsersByType(String userType) async {
+    final users = await getAllUsers();
+    return users.where((user) => user['userType'] == userType).toList();
   }
 
-  Future<int> insertBloodInventory(Map<String, dynamic> inventory) async {
-    final db = await database;
-    inventory['lastUpdated'] = DateTime.now().toIso8601String();
-    return await db.insert('blood_inventory', inventory);
+  // Check if email exists
+  Future<bool> emailExists(String email) async {
+    final user = await getUserByEmail(email);
+    return user != null;
   }
 
-  Future<int> deleteBloodInventory(String bloodType) async {
-    final db = await database;
-    return await db.delete(
-      'blood_inventory',
-      where: 'bloodType = ?',
-      whereArgs: [bloodType],
-    );
-  }
+  // Change password
+  Future<bool> changePassword(
+    int userId,
+    String oldPassword,
+    String newPassword,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final users = await getAllUsers();
 
-  Future<bool> checkBloodAvailability(String bloodType) async {
-    final inventory = await getBloodInventoryByType(bloodType);
-    return inventory != null && inventory['units'] > 0;
-  }
+      final userIndex = users.indexWhere((user) => user['id'] == userId);
+      if (userIndex == -1) return false;
 
-  Future<int> getBloodUnits(String bloodType) async {
-    final inventory = await getBloodInventoryByType(bloodType);
-    return inventory?['units'] ?? 0;
+      final user = users[userIndex];
+      final oldHashedPassword = _hashPassword(oldPassword);
+
+      // Verify old password
+      if (user['password'] != oldHashedPassword) {
+        return false;
+      }
+
+      // Update password
+      users[userIndex]['password'] = _hashPassword(newPassword);
+      users[userIndex]['updatedAt'] = DateTime.now().toIso8601String();
+
+      await prefs.setString(_usersKey, jsonEncode(users));
+      return true;
+    } catch (e) {
+      // In production, use proper logging instead of print
+      return false;
+    }
   }
-} 
+}
