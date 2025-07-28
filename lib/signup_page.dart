@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'db_helper.dart';
+import 'services/data_service.dart';
+import 'models/user_model.dart';
 import 'theme/app_theme.dart';
 
 class SignupPage extends StatefulWidget {
@@ -54,8 +55,9 @@ class _SignupPageState extends State<SignupPage> {
     });
 
     try {
+      final dataService = DataService();
       // Check if email already exists
-      final existingUser = await DatabaseHelper().getUserByEmail(
+      final existingUser = await dataService.getUserByEmail(
         _emailController.text.trim(),
       );
 
@@ -72,17 +74,22 @@ class _SignupPageState extends State<SignupPage> {
       }
 
       // Create new user
-      final success = await DatabaseHelper().insertUser({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'password': _passwordController.text,
-        'userType': _userType,
-        'bloodGroup': _bloodGroupController.text.trim(),
-        'age': int.tryParse(_ageController.text) ?? 0,
-        'contactNumber': _userType == 'Admin'
+      final now = DateTime.now().toIso8601String();
+      final newUser = UserModel(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        userType: _userType,
+        bloodGroup: _bloodGroupController.text.trim(),
+        age: int.tryParse(_ageController.text) ?? 0,
+        contactNumber: _userType == 'Admin'
             ? 'N/A'
             : _contactController.text.trim(),
-      });
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final success = await dataService.createUser(newUser);
 
       if (!mounted) return;
 

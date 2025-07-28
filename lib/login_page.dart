@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'db_helper.dart';
+import 'services/data_service.dart';
 import 'theme/app_theme.dart';
 import 'main.dart' show UserSession;
 import 'session_manager.dart';
@@ -41,43 +41,44 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      final dataService = DataService();
       // Check if user exists
-      final user = await DatabaseHelper().getUserByEmail(
+      final user = await dataService.getUserByEmail(
         _emailController.text.trim(),
       );
 
       if (user != null) {
         // Authenticate user
-        final isAuthenticated = await DatabaseHelper().authenticateUser(
+        final isAuthenticated = await dataService.authenticateUser(
           _emailController.text.trim(),
           _passwordController.text,
         );
 
         if (isAuthenticated) {
           // Set user session
-          UserSession.userType = user['userType'];
-          UserSession.email = user['email'];
-          UserSession.userName = user['name'];
-          UserSession.userId = user['id'];
+          UserSession.userType = user.userType;
+          UserSession.email = user.email;
+          UserSession.userName = user.name;
+          UserSession.userId = user.id ?? 0;
 
           // Save session data
           await SessionManager.saveUserSession(
-            userId: user['id'],
-            email: user['email'],
-            userType: user['userType'],
-            userName: user['name'],
+            userId: user.id ?? 0,
+            email: user.email,
+            userType: user.userType,
+            userName: user.name,
           );
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Welcome back, ${user['name']}!'),
+                content: Text('Welcome back, ${user.name}!'),
                 backgroundColor: AppTheme.successColor,
               ),
             );
 
             // Navigate based on user type
-            switch (user['userType']) {
+            switch (user.userType) {
               case 'Admin':
                 Navigator.of(context).pushReplacementNamed('/admin');
                 break;
