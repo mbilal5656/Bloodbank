@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'theme/app_theme.dart';
+import 'session_manager.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -41,9 +42,43 @@ class _SplashScreenState extends State<SplashScreen>
 
     _navigationTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        _checkSessionAndNavigate();
       }
     });
+  }
+
+  Future<void> _checkSessionAndNavigate() async {
+    try {
+      final isLoggedIn = await SessionManager.isLoggedIn();
+      final userType = await SessionManager.getUserType();
+      
+      if (mounted) {
+        if (isLoggedIn && userType != null) {
+          // User is logged in, navigate to appropriate dashboard
+          switch (userType) {
+            case 'Admin':
+              Navigator.pushReplacementNamed(context, '/admin');
+              break;
+            case 'Donor':
+              Navigator.pushReplacementNamed(context, '/donor');
+              break;
+            case 'Receiver':
+              Navigator.pushReplacementNamed(context, '/receiver');
+              break;
+            default:
+              Navigator.pushReplacementNamed(context, '/home');
+          }
+        } else {
+          // User is not logged in, go to home page
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
+    } catch (e) {
+      // Handle any errors by going to home page
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    }
   }
 
   @override
@@ -99,87 +134,74 @@ class _SplashScreenState extends State<SplashScreen>
                   );
                 },
               ),
+
               const SizedBox(height: 40),
-              
+
               // App Title
-              AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _slideAnimation.value),
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Text(
-                        'Blood Bank',
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          color: AppTheme.lightTextColor,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              
-              const SizedBox(height: 8),
-              
-              // Subtitle
-              AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _slideAnimation.value),
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Text(
-                        'Management System',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.lightTextColor.withValues(alpha: 0.8),
-                          fontWeight: FontWeight.w300,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              
-              const SizedBox(height: 60),
-              
-              // Loading Indicator
-              AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppTheme.lightTextColor,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Tagline
               AnimatedBuilder(
                 animation: _animationController,
                 builder: (context, child) {
                   return FadeTransition(
                     opacity: _fadeAnimation,
                     child: Text(
-                      'Donate Blood, Save Lives',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      'Blood Bank',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: AppTheme.lightTextColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 8),
+
+              // App Subtitle
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Text(
+                      'Management System',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: AppTheme.lightTextColor.withValues(alpha: 0.7),
-                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 60),
+
+              // Loading Indicator
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppTheme.lightTextColor,
+                      ),
+                      strokeWidth: 3,
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // Loading Text
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Text(
+                      'Loading...',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.lightTextColor.withValues(alpha: 0.8),
                       ),
                     ),
                   );

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'utils/secure_code_generator.dart';
+import 'notification_helper.dart';
+import 'session_manager.dart';
+import 'theme/app_theme.dart';
 
 class DonorPage extends StatefulWidget {
   const DonorPage({super.key});
@@ -19,8 +22,25 @@ class _DonorPageState extends State<DonorPage> {
   String? _donationCode;
   bool _isEligible = false;
   bool _isLoading = false;
+  List<Map<String, dynamic>> _notifications = [];
+  int _unreadNotificationsCount = 0;
 
-  final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  final List<String> _bloodGroups = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
 
   @override
   void dispose() {
@@ -32,16 +52,96 @@ class _DonorPageState extends State<DonorPage> {
     super.dispose();
   }
 
+  Future<void> _loadNotifications() async {
+    try {
+      final userType = await SessionManager.getUserType();
+      if (userType != null) {
+        final notifications =
+            await NotificationHelper.getNotificationsByUserType(userType);
+        final unreadCount =
+            await NotificationHelper.getUnreadNotificationsCount(userType);
+        setState(() {
+          _notifications = notifications;
+          _unreadNotificationsCount = unreadCount;
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  void _showNotificationsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notifications'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 300,
+          child: _notifications.isEmpty
+              ? const Center(child: Text('No notifications available'))
+              : ListView.builder(
+                  itemCount: _notifications.length,
+                  itemBuilder: (context, index) {
+                    final notification = _notifications[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            NotificationHelper.getNotificationColor(
+                              notification['type'],
+                            ),
+                        child: Icon(
+                          NotificationHelper.getNotificationIcon(
+                            notification['type'],
+                          ),
+                          color: AppTheme.lightTextColor,
+                        ),
+                      ),
+                      title: Text(
+                        notification['title'],
+                        style: TextStyle(
+                          fontWeight: notification['read']
+                              ? FontWeight.normal
+                              : FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(notification['message']),
+                      onTap: () {
+                        NotificationHelper.showNotificationDialog(
+                          context,
+                          notification,
+                        );
+                        if (!notification['read']) {
+                          NotificationHelper.markNotificationAsRead(
+                            notification['id'],
+                          );
+                          _loadNotifications();
+                        }
+                      },
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _checkEligibility() {
     if (!_formKey.currentState!.validate()) return;
 
     final age = int.tryParse(_ageController.text) ?? 0;
     final lastDonation = _lastDonationController.text;
-    
+
     // Basic eligibility check
     final isAgeValid = age >= 18 && age <= 65;
     final hasRecentDonation = lastDonation.isNotEmpty;
-    
+
     setState(() {
       _isEligible = isAgeValid && !hasRecentDonation;
       if (_isEligible) {
@@ -53,9 +153,11 @@ class _DonorPageState extends State<DonorPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isEligible 
-          ? 'You are eligible to donate blood!' 
-          : 'You are not eligible to donate blood at this time.'),
+        content: Text(
+          _isEligible
+              ? 'You are eligible to donate blood!'
+              : 'You are not eligible to donate blood at this time.',
+        ),
         backgroundColor: _isEligible ? Colors.green : Colors.orange,
       ),
     );
@@ -119,23 +221,57 @@ class _DonorPageState extends State<DonorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Donor Eligibility'),
-        backgroundColor: const Color(0xFFE91E63),
+        title: const Text('Donor Dashboard'),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: AppTheme.lightTextColor,
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () => _showNotificationsDialog(),
+                tooltip: 'Notifications',
+              ),
+              if (_unreadNotificationsCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.errorColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_unreadNotificationsCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              await SessionManager.clearSession();
+              if (mounted) {
+                navigator.pushReplacementNamed('/login');
+              }
+            },
+            tooltip: 'Logout',
+          ),
+        ],
       ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFE91E63), // Pink
-              Color(0xFF9C27B0), // Purple
-              Color(0xFF673AB7), // Deep Purple
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        decoration: AppTheme.primaryGradientDecoration,
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -145,11 +281,7 @@ class _DonorPageState extends State<DonorPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Header
-                  Icon(
-                    Icons.volunteer_activism,
-                    size: 80,
-                    color: Colors.white,
-                  ),
+                  Icon(Icons.volunteer_activism, size: 80, color: Colors.white),
                   const SizedBox(height: 20),
                   Text(
                     'Blood Donor Eligibility',
@@ -161,9 +293,9 @@ class _DonorPageState extends State<DonorPage> {
                   const SizedBox(height: 8),
                   Text(
                     'Check your eligibility and schedule a donation',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -176,7 +308,10 @@ class _DonorPageState extends State<DonorPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      prefixIcon: const Icon(Icons.person, color: Colors.white70),
+                      prefixIcon: const Icon(
+                        Icons.person,
+                        color: Colors.white70,
+                      ),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.2),
                       labelStyle: const TextStyle(color: Colors.white70),
@@ -228,17 +363,24 @@ class _DonorPageState extends State<DonorPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      prefixIcon: const Icon(Icons.bloodtype, color: Colors.white70),
+                      prefixIcon: const Icon(
+                        Icons.bloodtype,
+                        color: Colors.white70,
+                      ),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.2),
                       labelStyle: const TextStyle(color: Colors.white70),
                     ),
                     dropdownColor: const Color(0xFF1A237E),
                     style: const TextStyle(color: Colors.white),
-                    items: _bloodGroups.map((group) => DropdownMenuItem(
-                      value: group,
-                      child: Text(group),
-                    )).toList(),
+                    items: _bloodGroups
+                        .map(
+                          (group) => DropdownMenuItem(
+                            value: group,
+                            child: Text(group),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) {
                       setState(() {
                         _selectedBloodGroup = value!;
@@ -254,7 +396,10 @@ class _DonorPageState extends State<DonorPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      prefixIcon: const Icon(Icons.phone, color: Colors.white70),
+                      prefixIcon: const Icon(
+                        Icons.phone,
+                        color: Colors.white70,
+                      ),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.2),
                       labelStyle: const TextStyle(color: Colors.white70),
@@ -265,7 +410,10 @@ class _DonorPageState extends State<DonorPage> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your contact number';
                       }
-                      final cleanNumber = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+                      final cleanNumber = value.replaceAll(
+                        RegExp(r'[\s\-\(\)]'),
+                        '',
+                      );
                       if (!RegExp(r'^\+?[0-9]{10,15}$').hasMatch(cleanNumber)) {
                         return 'Please enter a valid contact number';
                       }
@@ -281,7 +429,10 @@ class _DonorPageState extends State<DonorPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      prefixIcon: const Icon(Icons.calendar_today, color: Colors.white70),
+                      prefixIcon: const Icon(
+                        Icons.calendar_today,
+                        color: Colors.white70,
+                      ),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.2),
                       labelStyle: const TextStyle(color: Colors.white70),
@@ -296,7 +447,7 @@ class _DonorPageState extends State<DonorPage> {
                         lastDate: DateTime.now(),
                       );
                       if (date != null) {
-                        _lastDonationController.text = 
+                        _lastDonationController.text =
                             '${date.day}/${date.month}/${date.year}';
                       }
                     },
@@ -310,11 +461,17 @@ class _DonorPageState extends State<DonorPage> {
                       decoration: BoxDecoration(
                         color: Colors.green.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
+                        border: Border.all(
+                          color: Colors.green.withValues(alpha: 0.5),
+                        ),
                       ),
                       child: Column(
                         children: [
-                          const Icon(Icons.check_circle, color: Colors.green, size: 32),
+                          const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 32,
+                          ),
                           const SizedBox(height: 8),
                           const Text(
                             'Eligible for Donation',
@@ -354,7 +511,10 @@ class _DonorPageState extends State<DonorPage> {
                       ),
                       child: const Text(
                         'Check Eligibility',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -379,12 +539,17 @@ class _DonorPageState extends State<DonorPage> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text(
                                 'Schedule Donation',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                       ),
                     ),
@@ -398,7 +563,9 @@ class _DonorPageState extends State<DonorPage> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,4 +613,4 @@ class _DonorPageState extends State<DonorPage> {
       ),
     );
   }
-} 
+}

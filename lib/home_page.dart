@@ -29,7 +29,7 @@ class HomePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 20),
-                
+
                 // Hero Icon
                 Container(
                   decoration: BoxDecoration(
@@ -50,9 +50,9 @@ class HomePage extends StatelessWidget {
                     size: 50,
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 Text(
                   'Donate Blood, Save Lives',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -61,9 +61,9 @@ class HomePage extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 Text(
                   'Join our community to help those in need',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -71,9 +71,9 @@ class HomePage extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Navigation Buttons
                 _HomeButton(
                   icon: Icons.login,
@@ -81,27 +81,27 @@ class HomePage extends StatelessWidget {
                   color: AppTheme.successColor,
                   onTap: () => Navigator.pushNamed(context, '/login'),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 _HomeButton(
                   icon: Icons.person_add,
                   label: 'Sign Up',
                   color: AppTheme.infoColor,
                   onTap: () => Navigator.pushNamed(context, '/signup'),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 _HomeButton(
                   icon: Icons.contact_support,
                   label: 'Contact Us',
                   color: AppTheme.warningColor,
                   onTap: () => Navigator.pushNamed(context, '/contact'),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Quick Features Section
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -115,16 +115,17 @@ class HomePage extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _FeatureCard(
                             icon: Icons.bloodtype,
                             label: 'Check\nAvailability',
-                            onTap: () => Navigator.pushNamed(context, '/receiver'),
+                            onTap: () =>
+                                Navigator.pushNamed(context, '/receiver'),
                           ),
                           _FeatureCard(
                             icon: Icons.volunteer_activism,
@@ -141,9 +142,9 @@ class HomePage extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 Text(
                   '"The gift of blood is the gift of life."',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -152,7 +153,7 @@ class HomePage extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 16),
               ],
             ),
@@ -204,7 +205,7 @@ class _HomeButton extends StatelessWidget {
         label: Text(
           label,
           style: const TextStyle(
-            fontSize: 16, 
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: AppTheme.lightTextColor,
           ),
@@ -252,11 +253,7 @@ class _FeatureCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon, 
-              color: AppTheme.lightTextColor, 
-              size: 24,
-            ),
+            Icon(icon, color: AppTheme.lightTextColor, size: 24),
             const SizedBox(height: 6),
             Text(
               label,

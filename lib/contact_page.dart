@@ -160,9 +160,9 @@ class _ContactPageState extends State<ContactPage> {
                     color: AppTheme.primaryColor,
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 Text(
                   'Get in Touch',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -170,9 +170,9 @@ class _ContactPageState extends State<ContactPage> {
                     color: AppTheme.lightTextColor,
                   ),
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 Text(
                   'We are here to help you. Reach out for any queries or support.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -180,9 +180,9 @@ class _ContactPageState extends State<ContactPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Contact Information Cards
                 _ContactCard(
                   icon: Icons.email,
@@ -192,7 +192,7 @@ class _ContactPageState extends State<ContactPage> {
                   actionLabel: 'Send Email',
                   onAction: _launchEmail,
                 ),
-                
+
                 _ContactCard(
                   icon: Icons.phone,
                   title: 'Phone',
@@ -201,7 +201,7 @@ class _ContactPageState extends State<ContactPage> {
                   actionLabel: 'Call',
                   onAction: _launchPhone,
                 ),
-                
+
                 _ContactCard(
                   icon: Icons.location_on,
                   title: 'Address',
@@ -210,7 +210,7 @@ class _ContactPageState extends State<ContactPage> {
                   actionLabel: 'Open in Maps',
                   onAction: _launchMap,
                 ),
-                
+
                 _ContactCard(
                   icon: Icons.access_time,
                   title: 'Operating Hours',
@@ -219,9 +219,9 @@ class _ContactPageState extends State<ContactPage> {
                   actionLabel: null,
                   onAction: null,
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Contact Form
                 Container(
                   padding: const EdgeInsets.all(24),
@@ -233,14 +233,15 @@ class _ContactPageState extends State<ContactPage> {
                       children: [
                         Text(
                           'Send us a Message',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppTheme.lightTextColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: AppTheme.lightTextColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         TextFormField(
                           controller: _nameController,
                           decoration: InputDecoration(
@@ -253,9 +254,9 @@ class _ContactPageState extends State<ContactPage> {
                               ? 'Please enter your name'
                               : null,
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         TextFormField(
                           controller: _emailController,
                           decoration: InputDecoration(
@@ -269,15 +270,17 @@ class _ContactPageState extends State<ContactPage> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your email';
                             }
-                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                            if (!RegExp(
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                            ).hasMatch(value)) {
                               return 'Please enter a valid email';
                             }
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         TextFormField(
                           controller: _subjectController,
                           decoration: InputDecoration(
@@ -290,9 +293,9 @@ class _ContactPageState extends State<ContactPage> {
                               ? 'Please enter a subject'
                               : null,
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         TextFormField(
                           controller: _messageController,
                           decoration: InputDecoration(
@@ -306,9 +309,9 @@ class _ContactPageState extends State<ContactPage> {
                               ? 'Please enter your message'
                               : null,
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         SizedBox(
                           width: double.infinity,
                           height: 50,
@@ -337,9 +340,9 @@ class _ContactPageState extends State<ContactPage> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Emergency Contact
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -358,18 +361,20 @@ class _ContactPageState extends State<ContactPage> {
                           children: [
                             Text(
                               'Emergency Contact:',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.lightTextColor,
-                              ),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.lightTextColor,
+                                  ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               '+92 321 6412855',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.lightTextColor,
-                              ),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.lightTextColor,
+                                  ),
                             ),
                           ],
                         ),
@@ -418,11 +423,7 @@ class _ContactCard extends StatelessWidget {
               color: AppTheme.primaryColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: AppTheme.lightTextColor,
-              size: 24,
-            ),
+            child: Icon(icon, color: AppTheme.lightTextColor, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(

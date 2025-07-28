@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'utils/secure_code_generator.dart';
+import 'notification_helper.dart';
+import 'session_manager.dart';
+import 'theme/app_theme.dart';
 
 class ReceiverPage extends StatefulWidget {
   const ReceiverPage({super.key});
@@ -22,6 +25,8 @@ class _ReceiverPageState extends State<ReceiverPage> {
   String? _requestCode;
   bool _isAvailable = false;
   bool _isLoading = false;
+  List<Map<String, dynamic>> _notifications = [];
+  int _unreadNotificationsCount = 0;
 
   final List<String> _bloodGroups = [
     'A+',
@@ -48,6 +53,12 @@ class _ReceiverPageState extends State<ReceiverPage> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _bloodGroupController.dispose();
@@ -56,6 +67,86 @@ class _ReceiverPageState extends State<ReceiverPage> {
     _urgencyController.dispose();
     _verificationCodeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadNotifications() async {
+    try {
+      final userType = await SessionManager.getUserType();
+      if (userType != null) {
+        final notifications =
+            await NotificationHelper.getNotificationsByUserType(userType);
+        final unreadCount =
+            await NotificationHelper.getUnreadNotificationsCount(userType);
+        setState(() {
+          _notifications = notifications;
+          _unreadNotificationsCount = unreadCount;
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  void _showNotificationsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notifications'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 300,
+          child: _notifications.isEmpty
+              ? const Center(child: Text('No notifications available'))
+              : ListView.builder(
+                  itemCount: _notifications.length,
+                  itemBuilder: (context, index) {
+                    final notification = _notifications[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            NotificationHelper.getNotificationColor(
+                              notification['type'],
+                            ),
+                        child: Icon(
+                          NotificationHelper.getNotificationIcon(
+                            notification['type'],
+                          ),
+                          color: AppTheme.lightTextColor,
+                        ),
+                      ),
+                      title: Text(
+                        notification['title'],
+                        style: TextStyle(
+                          fontWeight: notification['read']
+                              ? FontWeight.normal
+                              : FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(notification['message']),
+                      onTap: () {
+                        NotificationHelper.showNotificationDialog(
+                          context,
+                          notification,
+                        );
+                        if (!notification['read']) {
+                          NotificationHelper.markNotificationAsRead(
+                            notification['id'],
+                          );
+                          _loadNotifications();
+                        }
+                      },
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _checkAvailability() {
@@ -161,23 +252,57 @@ class _ReceiverPageState extends State<ReceiverPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Blood Request'),
-        backgroundColor: const Color(0xFFE91E63),
+        title: const Text('Receiver Dashboard'),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: AppTheme.lightTextColor,
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () => _showNotificationsDialog(),
+                tooltip: 'Notifications',
+              ),
+              if (_unreadNotificationsCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.errorColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_unreadNotificationsCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              await SessionManager.clearSession();
+              if (mounted) {
+                navigator.pushReplacementNamed('/login');
+              }
+            },
+            tooltip: 'Logout',
+          ),
+        ],
       ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFE91E63), // Pink
-              Color(0xFF9C27B0), // Purple
-              Color(0xFF673AB7), // Deep Purple
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        decoration: AppTheme.primaryGradientDecoration,
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),

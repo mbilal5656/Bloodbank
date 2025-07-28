@@ -67,6 +67,10 @@ class _LoginPageState extends State<LoginPage> {
             // Navigate based on user type
             if (user['userType'] == 'Admin') {
               Navigator.pushReplacementNamed(context, '/admin');
+            } else if (user['userType'] == 'Donor') {
+              Navigator.pushReplacementNamed(context, '/donor');
+            } else if (user['userType'] == 'Receiver') {
+              Navigator.pushReplacementNamed(context, '/receiver');
             } else {
               Navigator.pushReplacementNamed(context, '/home');
             }

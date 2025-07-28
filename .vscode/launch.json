@@ -2,6 +2,35 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Flutter (Chrome)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "chrome",
+                "--web-port=8080"
+            ]
+        },
+        {
+            "name": "Flutter (Web Server)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "web-server",
+                "--web-port=8080"
+            ]
+        },
+        {
+            "name": "Flutter (Android)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "deviceId": "android"
+        },
+        {
             "name": "Flutter (Windows)",
             "request": "launch",
             "type": "dart",
@@ -12,34 +41,18 @@
             ]
         },
         {
-            "name": "Flutter (Chrome)",
+            "name": "Flutter (Profile Mode)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
-            "args": [
-                "-d",
-                "chrome"
-            ]
+            "flutterMode": "profile"
         },
         {
-            "name": "Flutter (Edge)",
+            "name": "Flutter (Release Mode)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
-            "args": [
-                "-d",
-                "edge"
-            ]
-        },
-        {
-            "name": "Flutter (Web Server)",
-            "request": "launch",
-            "type": "dart",
-            "program": "lib/main.dart",
-            "args": [
-                "-d",
-                "web-server"
-            ]
+            "flutterMode": "release"
         }
     ]
 }

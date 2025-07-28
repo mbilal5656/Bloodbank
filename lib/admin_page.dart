@@ -11,6 +11,7 @@ class AdminPage extends StatefulWidget {
 
 class _AdminPageState extends State<AdminPage> {
   List<Map<String, dynamic>> _users = [];
+  Map<String, int> _bloodInventorySummary = {};
   bool _isLoading = true;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -42,8 +43,11 @@ class _AdminPageState extends State<AdminPage> {
   Future<void> _loadUsers() async {
     try {
       final users = await DatabaseHelper().getAllUsers();
+      final bloodInventorySummary = await DatabaseHelper()
+          .getBloodInventorySummary();
       setState(() {
         _users = users;
+        _bloodInventorySummary = bloodInventorySummary;
         _isLoading = false;
       });
     } catch (e) {
@@ -332,6 +336,20 @@ class _AdminPageState extends State<AdminPage> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.inventory),
+            onPressed: () {
+              Navigator.pushNamed(context, '/blood_inventory');
+            },
+            tooltip: 'Blood Inventory',
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.pushNamed(context, '/notification_management');
+            },
+            tooltip: 'Notifications',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               final navigator = Navigator.of(context);
@@ -355,7 +373,7 @@ class _AdminPageState extends State<AdminPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,6 +398,105 @@ class _AdminPageState extends State<AdminPage> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 20),
+
+                  // Blood Inventory Summary
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Blood Inventory Summary',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      color: const Color(0xFF1A237E),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/blood_inventory',
+                                  );
+                                },
+                                icon: const Icon(Icons.inventory),
+                                label: const Text('Manage Inventory'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF1A237E),
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          if (_bloodInventorySummary.isNotEmpty)
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              children: _bloodInventorySummary.entries.map((
+                                entry,
+                              ) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: entry.value > 0
+                                        ? Colors.green.withValues(alpha: 0.1)
+                                        : Colors.red.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: entry.value > 0
+                                          ? Colors.green
+                                          : Colors.red,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        entry.key,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${entry.value}',
+                                        style: TextStyle(
+                                          color: entry.value > 0
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            )
+                          else
+                            const Text(
+                              'No blood inventory data available',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 20),
 
                   // Add User Form
@@ -593,83 +710,74 @@ class _AdminPageState extends State<AdminPage> {
                   ],
 
                   // Users List
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: _users.length,
-                      itemBuilder: (context, index) {
-                        final user = _users[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: user['userType'] == 'Admin'
-                                  ? Colors.blue
-                                  : user['userType'] == 'Donor'
-                                  ? Colors.red
-                                  : Colors.green,
-                              child: Icon(
-                                user['userType'] == 'Donor'
-                                    ? Icons.volunteer_activism
-                                    : user['userType'] == 'Receiver'
-                                    ? Icons.person
-                                    : Icons.admin_panel_settings,
-                                color: Colors.white,
-                              ),
-                            ),
-                            title: Text(
-                              '${user['name']} (${user['userType']})',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Email: ${user['email']}'),
-                                Text('Blood Group: ${user['bloodGroup']}'),
-                                Text('Age: ${user['age']}'),
-                                if (user['userType'] != 'Admin')
-                                  Text('Contact: ${user['contactNumber']}'),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.blue,
-                                  ),
-                                  onPressed: () => _showEditUserDialog(user),
-                                  tooltip: 'Edit User',
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.lock_reset,
-                                    color: Colors.orange,
-                                  ),
-                                  onPressed: () => _resetUserPassword(
-                                    user['id'],
-                                    user['email'],
-                                  ),
-                                  tooltip: 'Reset Password',
-                                ),
-                                if (user['userType'] != 'Admin')
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () => _deleteUser(user['id']),
-                                    tooltip: 'Delete User',
-                                  ),
-                              ],
-                            ),
+                  ..._users.map(
+                    (user) => Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: user['userType'] == 'Admin'
+                              ? Colors.blue
+                              : user['userType'] == 'Donor'
+                              ? Colors.red
+                              : Colors.green,
+                          child: Icon(
+                            user['userType'] == 'Donor'
+                                ? Icons.volunteer_activism
+                                : user['userType'] == 'Receiver'
+                                ? Icons.person
+                                : Icons.admin_panel_settings,
+                            color: Colors.white,
                           ),
-                        );
-                      },
+                        ),
+                        title: Text(
+                          '${user['name']} (${user['userType']})',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Email: ${user['email']}'),
+                            Text('Blood Group: ${user['bloodGroup']}'),
+                            Text('Age: ${user['age']}'),
+                            if (user['userType'] != 'Admin')
+                              Text('Contact: ${user['contactNumber']}'),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _showEditUserDialog(user),
+                              tooltip: 'Edit User',
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.lock_reset,
+                                color: Colors.orange,
+                              ),
+                              onPressed: () =>
+                                  _resetUserPassword(user['id'], user['email']),
+                              tooltip: 'Reset Password',
+                            ),
+                            if (user['userType'] != 'Admin')
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => _deleteUser(user['id']),
+                                tooltip: 'Delete User',
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
+
+                  const SizedBox(
+                    height: 32,
+                  ), // Bottom padding for better scrolling
                 ],
               ),
             ),

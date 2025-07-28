@@ -245,7 +245,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyLarge
-                                          ?.copyWith(color: Colors.grey[600]),
+                                          ?.copyWith(color: Colors.grey.shade600),
                                     ),
                                   ],
                                 ),

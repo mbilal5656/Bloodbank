@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
+import 'theme/app_theme.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -38,9 +39,12 @@ class _SignupPageState extends State<SignupPage> {
         _ageController.text.isEmpty ||
         (_userType != 'Admin' && _contactController.text.isEmpty)) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please fill all fields'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
       return;
     }
 
@@ -58,7 +62,10 @@ class _SignupPageState extends State<SignupPage> {
 
       if (existingUser != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email already registered')),
+          SnackBar(
+            content: const Text('Email already registered'),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
         return;
       }
@@ -83,7 +90,7 @@ class _SignupPageState extends State<SignupPage> {
           content: Text(
             'Account created successfully! Welcome, ${_nameController.text}!',
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: AppTheme.successColor,
         ),
       );
       Navigator.pushReplacementNamed(context, '/login');
@@ -92,7 +99,7 @@ class _SignupPageState extends State<SignupPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Signup failed: ${e.toString()}'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.errorColor,
         ),
       );
     }
@@ -104,17 +111,7 @@ class _SignupPageState extends State<SignupPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFE91E63), // Pink
-              Color(0xFF9C27B0), // Purple
-              Color(0xFF673AB7), // Deep Purple
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        decoration: AppTheme.primaryGradientDecoration,
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(
@@ -124,21 +121,57 @@ class _SignupPageState extends State<SignupPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // App Logo/Icon
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.cardColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.person_add,
+                    size: 50,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
                 Text(
                   'Create Account',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.lightTextColor,
+                  ),
                 ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  'Join our blood bank community',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.lightTextColor.withValues(alpha: 0.8),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 32),
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
                     labelText: 'Full Name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(Icons.person, color: Colors.white70),
+                    prefixIcon: const Icon(Icons.person),
                     filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.2),
+                    fillColor: AppTheme.cardColor,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -152,12 +185,9 @@ class _SignupPageState extends State<SignupPage> {
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(Icons.email, color: Colors.white70),
+                    prefixIcon: const Icon(Icons.email),
                     filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.2),
+                    fillColor: AppTheme.cardColor,
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -177,12 +207,9 @@ class _SignupPageState extends State<SignupPage> {
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(Icons.lock, color: Colors.white70),
+                    prefixIcon: const Icon(Icons.lock),
                     filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.2),
+                    fillColor: AppTheme.cardColor,
                   ),
                   obscureText: true,
                   validator: (value) {
@@ -216,15 +243,9 @@ class _SignupPageState extends State<SignupPage> {
                   controller: _bloodGroupController,
                   decoration: InputDecoration(
                     labelText: 'Blood Group (e.g., A+)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(
-                      Icons.bloodtype,
-                      color: Colors.white70,
-                    ),
+                    prefixIcon: const Icon(Icons.bloodtype),
                     filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.2),
+                    fillColor: AppTheme.cardColor,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -251,12 +272,9 @@ class _SignupPageState extends State<SignupPage> {
                   controller: _ageController,
                   decoration: InputDecoration(
                     labelText: 'Age',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(Icons.cake, color: Colors.white70),
+                    prefixIcon: const Icon(Icons.cake),
                     filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.2),
+                    fillColor: AppTheme.cardColor,
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
@@ -275,15 +293,9 @@ class _SignupPageState extends State<SignupPage> {
                   value: _userType,
                   decoration: InputDecoration(
                     labelText: 'User Type',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(
-                      Icons.person_outline,
-                      color: Colors.white70,
-                    ),
+                    prefixIcon: const Icon(Icons.person_outline),
                     filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.2),
+                    fillColor: AppTheme.cardColor,
                   ),
                   items: ['Donor', 'Receiver']
                       .map(
@@ -303,15 +315,9 @@ class _SignupPageState extends State<SignupPage> {
                     controller: _contactController,
                     decoration: InputDecoration(
                       labelText: 'Contact Number',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.phone,
-                        color: Colors.white70,
-                      ),
+                      prefixIcon: const Icon(Icons.phone),
                       filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.2),
+                      fillColor: AppTheme.cardColor,
                     ),
                     keyboardType: TextInputType.phone,
                     validator: (value) {
@@ -334,24 +340,34 @@ class _SignupPageState extends State<SignupPage> {
                       return null;
                     },
                   ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _signup,
-                                      style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      backgroundColor: const Color(0xFFE91E63),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _signup,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: AppTheme.lightTextColor,
                     ),
-                  child: const Text(
-                    'Sign Up',
-                    style: TextStyle(color: Colors.white),
+                    child: const Text(
+                      'Sign Up',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => Navigator.pushNamed(context, '/login'),
-                  child: const Text(
+                  child: Text(
                     'Already have an account? Login',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(
+                      color: AppTheme.lightTextColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],

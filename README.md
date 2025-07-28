@@ -56,6 +56,7 @@ A comprehensive Flutter application for managing blood bank operations with secu
 - **Stock Level Monitoring** with visual indicators
 - **Emergency Blood Requests** with priority processing
 - **Color-coded Blood Types** for easy identification
+- **Search and Filter** functionality for inventory management
 
 ### 🏥 Admin Dashboard
 - **Full CRUD Operations** on users and blood inventory
@@ -67,6 +68,7 @@ A comprehensive Flutter application for managing blood bank operations with secu
 - **Stock Level Management**
 - **System Overview** with key metrics
 - **Modern UI** with color-coded user types and action buttons
+- **Notification System** for sending alerts to users
 
 ### 🩸 Donor Services
 - **Donation Eligibility Checker**
@@ -76,6 +78,7 @@ A comprehensive Flutter application for managing blood bank operations with secu
 - **Secure Code Generation** for donation tracking
 - **Donation Scheduling** system
 - **Health Assessment** questionnaire
+- **Notification System** for donation reminders
 
 ### 🏥 Receiver Services
 - **Blood Availability Checker** with real-time data
@@ -85,6 +88,7 @@ A comprehensive Flutter application for managing blood bank operations with secu
 - **Hospital/Clinic Information** tracking
 - **Priority Processing** for urgent requests
 - **Request Status Tracking**
+- **Notification System** for request updates
 
 ### 📞 Contact & Support
 - **Contact Us Page** with inquiry form
@@ -177,6 +181,14 @@ A comprehensive Flutter application for managing blood bank operations with secu
    ```
 
 3. **Run the application**
+
+   **Using VS Code Debug Configuration (Recommended):**
+   - Open VS Code
+   - Press `F5` or go to Run → Start Debugging
+   - Select "Flutter (Chrome)" for web debugging
+   - Select "Flutter (Android)" for mobile debugging
+
+   **Using Command Line:**
    ```bash
    # For web (recommended)
    flutter run -d web-server --web-port=8080
@@ -217,6 +229,9 @@ lib/
 ├── admin_page.dart             # Admin dashboard
 ├── donor_page.dart             # Donor services
 ├── receiver_page.dart          # Receiver services
+├── blood_inventory_page.dart   # Blood inventory management
+├── notification_management_page.dart # Notification system
+├── notification_helper.dart    # Notification utilities
 ├── theme/
 │   └── app_theme.dart          # Modern Ocean Blue theme system
 └── utils/
@@ -225,12 +240,24 @@ lib/
 
 ## 🔧 Configuration
 
+### VS Code Debug Configuration
+The project includes comprehensive debug configurations in `.vscode/launch.json`:
+
+- **Flutter (Chrome)**: Debug in Chrome browser
+- **Flutter (Web Server)**: Debug on web server
+- **Flutter (Android)**: Debug on Android device/emulator
+- **Flutter (Windows)**: Debug on Windows desktop
+- **Flutter (Profile Mode)**: Performance profiling
+- **Flutter (Release Mode)**: Release build testing
+
 ### Database Setup
 The app automatically initializes with:
 - Default admin user (mbilalpk56@gmail.com / 1Q2w3e5R)
 - SharedPreferences for data persistence
 - Secure password hashing
 - User session management
+- Blood inventory with default stock levels
+- Notification system initialization
 
 ### Security Features
 - **Password Validation**: Minimum 8 characters with mixed case, digits, and special characters
@@ -255,6 +282,7 @@ The app automatically initializes with:
 3. **User Management**: View and delete registered users
 4. **Monitor System**: Track blood availability and user activity
 5. **System Overview**: View key metrics and statistics
+6. **Send Notifications**: Communicate with users through the notification system
 
 ### For Donors
 1. **Register** as a donor with personal information
@@ -262,6 +290,7 @@ The app automatically initializes with:
 3. **Schedule Donation**: Get secure codes for donation tracking
 4. **Update Profile**: Modify personal information and preferences
 5. **Health Assessment**: Complete eligibility questionnaire
+6. **Receive Notifications**: Get updates about donation requests
 
 ### For Receivers
 1. **Register** as a receiver
@@ -269,6 +298,7 @@ The app automatically initializes with:
 3. **Submit Requests**: Fill blood request forms with patient details
 4. **Track Requests**: Use verification codes to monitor request status
 5. **Emergency Requests**: Priority processing for urgent needs
+6. **Receive Notifications**: Get updates about blood availability
 
 ## 🔒 Security Features
 
@@ -295,6 +325,12 @@ The app automatically initializes with:
 - **Status Indicators**: Visual alerts for low/critical stock
 - **Request Tracking**: Secure codes for blood requests
 - **Priority Management**: Emergency request processing
+
+### Notification System
+- **User Notifications**: Personalized alerts for users
+- **Admin Notifications**: System-wide announcements
+- **Real-time Updates**: Instant notification delivery
+- **Notification History**: Track all sent notifications
 
 ## 🤝 Contributing
 
@@ -349,6 +385,7 @@ For urgent blood requests or emergencies:
 - **v1.5.0** - Enhanced admin dashboard and blood inventory management
 - **v1.6.0** - **NEW**: Modern Ocean Blue theme with glass effects and improved UX
 - **v1.7.0** - **NEW**: Enhanced admin functionality with user management, password reset, and admin-only user creation
+- **v1.8.0** - **NEW**: Added comprehensive notification system, blood inventory search, and improved error handling
 
 ## 🐛 Known Issues & Solutions
 
@@ -357,18 +394,21 @@ For urgent blood requests or emergencies:
 2. **Windows Desktop**: Requires Visual Studio with C++ workload
 3. **Password Reset**: Ensure email exists in database before reset
 4. **Port Conflicts**: Use different ports if 8080 is occupied
+5. **File Color Issues**: If Dart files show in white, restart IDE or check file extensions
 
 ### Troubleshooting
 - Run `flutter doctor` to check environment setup
 - Use `flutter clean` and `flutter pub get` for dependency issues
 - Check browser console for web-specific errors
 - For port conflicts: `flutter run -d web-server --web-port=8081`
+- For file color issues: Restart IDE or check file extensions
 
 ### Performance Tips
 - Use Chrome or Edge for optimal web performance
 - Enable hardware acceleration in browser settings
 - Clear browser cache if experiencing issues
 - Use the web-server mode for development
+- Use VS Code debug configurations for better debugging experience
 
 ## 🚀 Deployment
 
