@@ -136,8 +136,8 @@ class DatabaseHelper {
   Future<void> _insertDefaultAdmin(Database db) async {
     final adminUser = {
       'name': 'Admin',
-      'email': 'mbilalpk56@gmail.com',
-      'password': _hashPassword('1Q2w3e5R'),
+      'email': 'admin@bloodbank.com',
+      'password': _hashPassword('admin123'),
       'userType': 'Admin',
       'bloodGroup': 'N/A',
       'age': 30,
