@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'notification_helper.dart';
-import 'session_manager.dart';
 import 'main.dart' show UserSession;
 
 class NotificationManagementPage extends StatefulWidget {
@@ -18,7 +17,6 @@ class _NotificationManagementPageState
   final _titleController = TextEditingController();
   final _messageController = TextEditingController();
   String _selectedType = 'info';
-  String _selectedTargetUserType = 'all';
 
   @override
   void initState() {
@@ -79,31 +77,36 @@ class _NotificationManagementPageState
         _titleController.clear();
         _messageController.clear();
         _selectedType = 'info';
-        _selectedTargetUserType = 'all';
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Notification sent successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notification sent successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
 
         await _loadNotifications();
       } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to send notification'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to send notification'),
+          SnackBar(
+            content: Text('Error sending notification: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error sending notification: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -114,12 +117,14 @@ class _NotificationManagementPageState
       );
       if (success) {
         await _loadNotifications();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Notification marked as read'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notification marked as read'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error marking notification as read: $e');
@@ -133,12 +138,14 @@ class _NotificationManagementPageState
       );
       if (success) {
         await _loadNotifications();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Notifications cleared'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notifications cleared'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error clearing notifications: $e');
