@@ -15,8 +15,14 @@ class DataService {
   // Get all users
   Future<List<UserModel>> getAllUsers() async {
     try {
+      debugPrint('DataService: Getting all users...');
       final users = await _dbHelper.getAllUsers();
-      return users.map((user) => UserModel.fromMap(user)).toList();
+      debugPrint('DataService: Retrieved ${users.length} users from database');
+      final userModels = users.map((user) => UserModel.fromMap(user)).toList();
+      debugPrint(
+        'DataService: Converted to ${userModels.length} UserModel instances',
+      );
+      return userModels;
     } catch (e) {
       debugPrint('Error getting all users: $e');
       return [];
@@ -29,7 +35,9 @@ class DataService {
       debugPrint('DataService: Getting user by email: $email');
       final user = await _dbHelper.getUserByEmail(email);
       if (user != null) {
-        debugPrint('DataService: User found: ${user['name']} (${user['email']})');
+        debugPrint(
+          'DataService: User found: ${user['name']} (${user['email']})',
+        );
         return UserModel.fromMap(user);
       } else {
         debugPrint('DataService: User not found for email: $email');
@@ -297,18 +305,22 @@ class DataService {
       debugPrint('Starting database initialization...');
       await DatabaseHelper.initializeDatabase();
       debugPrint('Database initialized successfully');
-      
+
       // Test database by checking if admin user exists
       final dbHelper = DatabaseHelper();
       final adminUser = await dbHelper.getUserByEmail('admin@bloodbank.com');
       if (adminUser != null) {
-        debugPrint('Admin user found: ${adminUser['name']} (ID: ${adminUser['id']})');
+        debugPrint(
+          'Admin user found: ${adminUser['name']} (ID: ${adminUser['id']})',
+        );
       } else {
         debugPrint('Admin user not found - checking all users...');
         final allUsers = await dbHelper.getAllUsers();
         debugPrint('Total users in database: ${allUsers.length}');
         for (final user in allUsers) {
-          debugPrint('User: ${user['name']} (${user['email']}) - ID: ${user['id']}');
+          debugPrint(
+            'User: ${user['name']} (${user['email']}) - ID: ${user['id']}',
+          );
         }
       }
     } catch (e) {

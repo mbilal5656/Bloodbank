@@ -35,6 +35,7 @@ class _AdminPageState extends State<AdminPage> {
   @override
   void initState() {
     super.initState();
+    debugPrint('AdminPage: initState called');
     _loadUsers();
   }
 
@@ -53,15 +54,27 @@ class _AdminPageState extends State<AdminPage> {
 
   Future<void> _loadUsers() async {
     try {
+      debugPrint('AdminPage: Starting to load users...');
       final dataService = DataService();
+      debugPrint('AdminPage: DataService instance created');
+
+      debugPrint('AdminPage: Getting all users...');
       final users = await dataService.getAllUsers();
-      final bloodInventorySummary = await dataService.getBloodInventorySummary();
+      debugPrint('AdminPage: Retrieved ${users.length} users');
+
+      debugPrint('AdminPage: Getting blood inventory summary...');
+      final bloodInventorySummary = await dataService
+          .getBloodInventorySummary();
+      debugPrint('AdminPage: Blood inventory summary: $bloodInventorySummary');
+
       setState(() {
         _users = users.map((user) => user.toMap()).toList();
         _bloodInventorySummary = bloodInventorySummary;
         _isLoading = false;
       });
+      debugPrint('AdminPage: Users loaded successfully, UI updated');
     } catch (e) {
+      debugPrint('AdminPage: Error loading users: $e');
       setState(() {
         _isLoading = false;
       });
@@ -101,7 +114,7 @@ class _AdminPageState extends State<AdminPage> {
         _notificationMessageController.clear();
         _selectedNotificationType = 'info';
         _selectedTargetUserType = 'all';
-        
+
         setState(() {
           _showNotificationForm = false;
         });
@@ -398,12 +411,19 @@ class _AdminPageState extends State<AdminPage> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('AdminPage: build method called');
+
     // Access control: only Admin can access
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      debugPrint('AdminPage: Checking user access...');
       final navigator = Navigator.of(context);
       final userType = await SessionManager.getUserType();
+      debugPrint('AdminPage: Current user type: $userType');
       if (userType != 'Admin' && mounted) {
+        debugPrint('AdminPage: Access denied, redirecting to login');
         navigator.pushReplacementNamed('/login');
+      } else {
+        debugPrint('AdminPage: Access granted for admin user');
       }
     });
 
@@ -458,7 +478,9 @@ class _AdminPageState extends State<AdminPage> {
             backgroundColor: Colors.orange,
             foregroundColor: Colors.white,
             tooltip: 'Send Notification',
-            child: Icon(_showNotificationForm ? Icons.close : Icons.notifications),
+            child: Icon(
+              _showNotificationForm ? Icons.close : Icons.notifications,
+            ),
           ),
           const SizedBox(height: 16),
           FloatingActionButton(
@@ -546,12 +568,15 @@ class _AdminPageState extends State<AdminPage> {
                                       labelText: 'Type',
                                       border: OutlineInputBorder(),
                                     ),
-                                    items: ['info', 'success', 'warning', 'urgent']
-                                        .map((type) => DropdownMenuItem(
-                                              value: type,
-                                              child: Text(type.toUpperCase()),
-                                            ))
-                                        .toList(),
+                                    items:
+                                        ['info', 'success', 'warning', 'urgent']
+                                            .map(
+                                              (type) => DropdownMenuItem(
+                                                value: type,
+                                                child: Text(type.toUpperCase()),
+                                              ),
+                                            )
+                                            .toList(),
                                     onChanged: (value) {
                                       setState(() {
                                         _selectedNotificationType = value!;
@@ -568,10 +593,16 @@ class _AdminPageState extends State<AdminPage> {
                                       border: OutlineInputBorder(),
                                     ),
                                     items: ['all', 'Donor', 'Receiver', 'Admin']
-                                        .map((type) => DropdownMenuItem(
-                                              value: type,
-                                              child: Text(type == 'all' ? 'All Users' : type),
-                                            ))
+                                        .map(
+                                          (type) => DropdownMenuItem(
+                                            value: type,
+                                            child: Text(
+                                              type == 'all'
+                                                  ? 'All Users'
+                                                  : type,
+                                            ),
+                                          ),
+                                        )
                                         .toList(),
                                     onChanged: (value) {
                                       setState(() {
