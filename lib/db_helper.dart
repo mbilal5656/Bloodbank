@@ -32,6 +32,10 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, _databaseName);
+    
+    debugPrint('Database path: $path');
+    debugPrint('Database name: $_databaseName');
+    debugPrint('Database version: $_databaseVersion');
 
     return await openDatabase(
       path,
@@ -43,6 +47,8 @@ class DatabaseHelper {
 
   // Create database tables
   Future<void> _onCreate(Database db, int version) async {
+    debugPrint('Creating database tables...');
+    
     // Users table
     await db.execute('''
       CREATE TABLE $_usersTable (
@@ -58,6 +64,7 @@ class DatabaseHelper {
         updatedAt TEXT NOT NULL
       )
     ''');
+    debugPrint('Users table created successfully');
 
     // Blood inventory table
     await db.execute('''
@@ -71,6 +78,7 @@ class DatabaseHelper {
         FOREIGN KEY (createdBy) REFERENCES $_usersTable (id)
       )
     ''');
+    debugPrint('Blood inventory table created successfully');
 
     // Donations table
     await db.execute('''
@@ -85,6 +93,7 @@ class DatabaseHelper {
         FOREIGN KEY (donorId) REFERENCES $_usersTable (id)
       )
     ''');
+    debugPrint('Donations table created successfully');
 
     // Blood requests table
     await db.execute('''
@@ -102,6 +111,7 @@ class DatabaseHelper {
         FOREIGN KEY (requesterId) REFERENCES $_usersTable (id)
       )
     ''');
+    debugPrint('Blood requests table created successfully');
 
     // Notifications table
     await db.execute('''
@@ -116,12 +126,17 @@ class DatabaseHelper {
         FOREIGN KEY (userId) REFERENCES $_usersTable (id)
       )
     ''');
+    debugPrint('Notifications table created successfully');
 
     // Insert default admin user
+    debugPrint('Inserting default admin user...');
     await _insertDefaultAdmin(db);
     
     // Insert default blood inventory
+    debugPrint('Inserting default blood inventory...');
     await _insertDefaultBloodInventory(db);
+    
+    debugPrint('Database creation completed successfully');
   }
 
   // Upgrade database
@@ -134,6 +149,7 @@ class DatabaseHelper {
 
   // Insert default admin user
   Future<void> _insertDefaultAdmin(Database db) async {
+    debugPrint('Creating default admin user...');
     final adminUser = {
       'name': 'Admin',
       'email': 'admin@bloodbank.com',
@@ -146,7 +162,9 @@ class DatabaseHelper {
       'updatedAt': DateTime.now().toIso8601String(),
     };
 
-    await db.insert(_usersTable, adminUser);
+    debugPrint('Admin user data prepared: ${adminUser['email']}');
+    final id = await db.insert(_usersTable, adminUser);
+    debugPrint('Admin user inserted with ID: $id');
   }
 
   // Insert default blood inventory

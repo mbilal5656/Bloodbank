@@ -284,8 +284,23 @@ class DataService {
   // Initialize database
   static Future<void> initializeDatabase() async {
     try {
+      debugPrint('Starting database initialization...');
       await DatabaseHelper.initializeDatabase();
       debugPrint('Database initialized successfully');
+      
+      // Test database by checking if admin user exists
+      final dbHelper = DatabaseHelper();
+      final adminUser = await dbHelper.getUserByEmail('admin@bloodbank.com');
+      if (adminUser != null) {
+        debugPrint('Admin user found: ${adminUser['name']} (ID: ${adminUser['id']})');
+      } else {
+        debugPrint('Admin user not found - checking all users...');
+        final allUsers = await dbHelper.getAllUsers();
+        debugPrint('Total users in database: ${allUsers.length}');
+        for (final user in allUsers) {
+          debugPrint('User: ${user['name']} (${user['email']}) - ID: ${user['id']}');
+        }
+      }
     } catch (e) {
       debugPrint('Error initializing database: $e');
       rethrow;
