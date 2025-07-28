@@ -177,8 +177,19 @@ class DatabaseHelper {
   // Initialize database (public method)
   static Future<void> initializeDatabase() async {
     try {
+      debugPrint('Starting database initialization...');
       final dbHelper = DatabaseHelper();
-      await dbHelper.database;
+      final db = await dbHelper.database;
+      debugPrint('Database connection established successfully');
+      
+      // Test database by checking if admin user exists
+      final adminUser = await dbHelper.getUserByEmail('admin@bloodbank.com');
+      if (adminUser != null) {
+        debugPrint('Admin user found: ${adminUser['name']}');
+      } else {
+        debugPrint('Admin user not found - database may not be properly initialized');
+      }
+      
       debugPrint('Database initialized successfully');
     } catch (e) {
       debugPrint('Database initialization error: $e');
@@ -235,10 +246,16 @@ class DatabaseHelper {
   // Authenticate user
   Future<bool> authenticateUser(String email, String password) async {
     try {
+      debugPrint('Attempting authentication for email: $email');
       final user = await getUserByEmail(email);
       if (user != null) {
+        debugPrint('User found: ${user['name']} (${user['userType']})');
         final hashedPassword = _hashPassword(password);
-        return user['password'] == hashedPassword;
+        final passwordMatch = user['password'] == hashedPassword;
+        debugPrint('Password match: $passwordMatch');
+        return passwordMatch;
+      } else {
+        debugPrint('User not found for email: $email');
       }
       return false;
     } catch (e) {
@@ -250,10 +267,12 @@ class DatabaseHelper {
   // Insert new user
   Future<bool> insertUser(Map<String, dynamic> userData) async {
     try {
+      debugPrint('Attempting to create user: ${userData['email']}');
       final db = await database;
       
       // Hash password
       final hashedPassword = _hashPassword(userData['password']);
+      debugPrint('Password hashed successfully');
       
       // Prepare user data
       final user = {
@@ -268,7 +287,9 @@ class DatabaseHelper {
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
+      debugPrint('Inserting user into database...');
       final id = await db.insert(_usersTable, user);
+      debugPrint('User created with ID: $id');
       return id > 0;
     } catch (e) {
       debugPrint('Error inserting user: $e');
