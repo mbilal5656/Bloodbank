@@ -13,21 +13,46 @@ class _SignupPageState extends State<SignupPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _bloodGroupController = TextEditingController();
   final _ageController = TextEditingController();
   final _contactController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _emergencyContactController = TextEditingController();
+  final _medicalHistoryController = TextEditingController();
   String _userType = 'Donor';
+  String _selectedBloodGroup = 'A+';
+  String _gender = 'Male';
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _bloodGroupController.dispose();
     _ageController.dispose();
     _contactController.dispose();
+    _addressController.dispose();
+    _emergencyContactController.dispose();
+    _medicalHistoryController.dispose();
     super.dispose();
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: AppTheme.lightTextColor,
+        ),
+      ),
+    );
   }
 
   Future<void> _signup() async {
@@ -46,7 +71,7 @@ class _SignupPageState extends State<SignupPage> {
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _passwordController.text.isEmpty ||
-        _bloodGroupController.text.isEmpty ||
+        _confirmPasswordController.text.isEmpty ||
         _ageController.text.isEmpty ||
         (_userType != 'Admin' && _contactController.text.isEmpty)) {
       debugPrint('Validation failed: Missing required fields');
@@ -54,6 +79,33 @@ class _SignupPageState extends State<SignupPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please fill all required fields'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    // Password confirmation validation
+    if (_passwordController.text != _confirmPasswordController.text) {
+      debugPrint('Validation failed: Passwords do not match');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Passwords do not match'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    // Age validation
+    final age = int.tryParse(_ageController.text);
+    if (age == null || age < 18 || age > 65) {
+      debugPrint('Validation failed: Invalid age');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Age must be between 18 and 65'),
           backgroundColor: AppTheme.errorColor,
         ),
       );
@@ -98,7 +150,7 @@ class _SignupPageState extends State<SignupPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
         userType: _userType,
-        bloodGroup: _bloodGroupController.text.trim(),
+        bloodGroup: _selectedBloodGroup,
         age: int.tryParse(_ageController.text) ?? 0,
         contactNumber: _userType == 'Admin'
             ? 'N/A'
@@ -215,20 +267,24 @@ class _SignupPageState extends State<SignupPage> {
 
                 const SizedBox(height: 32),
 
+                // Personal Information Section
+                _buildSectionTitle('Personal Information'),
+                
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
-                    labelText: 'Full Name',
+                    labelText: 'Full Name *',
                     prefixIcon: const Icon(Icons.person),
                     filled: true,
                     fillColor: AppTheme.cardColor,
                   ),
                 ),
                 const SizedBox(height: 16),
+                
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
-                    labelText: 'Email',
+                    labelText: 'Email Address *',
                     prefixIcon: const Icon(Icons.email),
                     filled: true,
                     fillColor: AppTheme.cardColor,
@@ -236,31 +292,34 @@ class _SignupPageState extends State<SignupPage> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
+                
+                // Gender Selection
+                DropdownButtonFormField<String>(
+                  value: _gender,
                   decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock),
+                    labelText: 'Gender *',
+                    prefixIcon: const Icon(Icons.person_outline),
                     filled: true,
                     fillColor: AppTheme.cardColor,
                   ),
-                  obscureText: true,
+                  items: ['Male', 'Female', 'Other']
+                      .map((gender) => DropdownMenuItem(
+                            value: gender,
+                            child: Text(gender),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _gender = value!;
+                    });
+                  },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _bloodGroupController,
-                  decoration: InputDecoration(
-                    labelText: 'Blood Group (e.g., A+)',
-                    prefixIcon: const Icon(Icons.bloodtype),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                ),
-                const SizedBox(height: 16),
+                
                 TextFormField(
                   controller: _ageController,
                   decoration: InputDecoration(
-                    labelText: 'Age',
+                    labelText: 'Age * (18-65)',
                     prefixIcon: const Icon(Icons.cake),
                     filled: true,
                     fillColor: AppTheme.cardColor,
@@ -268,19 +327,48 @@ class _SignupPageState extends State<SignupPage> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 16),
+                
+                // Blood Information Section
+                _buildSectionTitle('Blood Information'),
+                
+                DropdownButtonFormField<String>(
+                  value: _selectedBloodGroup,
+                  decoration: InputDecoration(
+                    labelText: 'Blood Group *',
+                    prefixIcon: const Icon(Icons.bloodtype),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+                      .map((group) => DropdownMenuItem(
+                            value: group,
+                            child: Text(group),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedBloodGroup = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Account Information Section
+                _buildSectionTitle('Account Information'),
+                
                 DropdownButtonFormField<String>(
                   value: _userType,
                   decoration: InputDecoration(
-                    labelText: 'User Type',
+                    labelText: 'User Type *',
                     prefixIcon: const Icon(Icons.person_outline),
                     filled: true,
                     fillColor: AppTheme.cardColor,
                   ),
                   items: ['Donor', 'Receiver']
-                      .map(
-                        (type) =>
-                            DropdownMenuItem(value: type, child: Text(type)),
-                      )
+                      .map((type) => DropdownMenuItem(
+                            value: type,
+                            child: Text(type),
+                          ))
                       .toList(),
                   onChanged: (value) {
                     setState(() {
@@ -289,17 +377,103 @@ class _SignupPageState extends State<SignupPage> {
                   },
                 ),
                 const SizedBox(height: 16),
-                if (_userType != 'Admin')
-                  TextFormField(
-                    controller: _contactController,
-                    decoration: InputDecoration(
-                      labelText: 'Contact Number',
-                      prefixIcon: const Icon(Icons.phone),
-                      filled: true,
-                      fillColor: AppTheme.cardColor,
+                
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'Password *',
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
                     ),
-                    keyboardType: TextInputType.phone,
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
                   ),
+                  obscureText: _obscurePassword,
+                ),
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm Password *',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  obscureText: _obscureConfirmPassword,
+                ),
+                const SizedBox(height: 16),
+                
+                // Contact Information Section
+                _buildSectionTitle('Contact Information'),
+                
+                TextFormField(
+                  controller: _contactController,
+                  decoration: InputDecoration(
+                    labelText: 'Contact Number *',
+                    prefixIcon: const Icon(Icons.phone),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _addressController,
+                  decoration: InputDecoration(
+                    labelText: 'Address',
+                    prefixIcon: const Icon(Icons.location_on),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _emergencyContactController,
+                  decoration: InputDecoration(
+                    labelText: 'Emergency Contact',
+                    prefixIcon: const Icon(Icons.emergency),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                
+                // Medical Information Section
+                _buildSectionTitle('Medical Information'),
+                
+                TextFormField(
+                  controller: _medicalHistoryController,
+                  decoration: InputDecoration(
+                    labelText: 'Medical History (Optional)',
+                    prefixIcon: const Icon(Icons.medical_services),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  maxLines: 3,
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
