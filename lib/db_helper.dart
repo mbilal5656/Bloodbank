@@ -203,11 +203,23 @@ class DatabaseHelper {
       // Test database by checking if admin user exists
       final adminUser = await dbHelper.getUserByEmail('admin@bloodbank.com');
       if (adminUser != null) {
-        debugPrint('Admin user found: ${adminUser['name']}');
-      } else {
         debugPrint(
-          'Admin user not found - database may not be properly initialized',
+          'Admin user found: ${adminUser['name']} (ID: ${adminUser['id']})',
         );
+      } else {
+        debugPrint('Admin user not found - checking all users...');
+        final allUsers = await dbHelper.getAllUsers();
+        debugPrint('Total users in database: ${allUsers.length}');
+        for (final user in allUsers) {
+          debugPrint(
+            'User: ${user['name']} (${user['email']}) - ID: ${user['id']}',
+          );
+        }
+
+        // If no admin user exists, create one
+        debugPrint('Creating default admin user...');
+        await dbHelper._insertDefaultAdmin(db);
+        debugPrint('Default admin user created successfully');
       }
 
       debugPrint('Database initialized successfully');

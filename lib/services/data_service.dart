@@ -26,8 +26,15 @@ class DataService {
   // Get user by email
   Future<UserModel?> getUserByEmail(String email) async {
     try {
+      debugPrint('DataService: Getting user by email: $email');
       final user = await _dbHelper.getUserByEmail(email);
-      return user != null ? UserModel.fromMap(user) : null;
+      if (user != null) {
+        debugPrint('DataService: User found: ${user['name']} (${user['email']})');
+        return UserModel.fromMap(user);
+      } else {
+        debugPrint('DataService: User not found for email: $email');
+        return null;
+      }
     } catch (e) {
       debugPrint('Error getting user by email: $e');
       return null;
@@ -58,7 +65,10 @@ class DataService {
   // Create new user
   Future<bool> createUser(UserModel user) async {
     try {
-      return await _dbHelper.insertUser(user.toMap());
+      debugPrint('DataService: Creating user: ${user.name} (${user.email})');
+      final result = await _dbHelper.insertUser(user.toMap());
+      debugPrint('DataService: User creation result: $result');
+      return result;
     } catch (e) {
       debugPrint('Error creating user: $e');
       return false;
