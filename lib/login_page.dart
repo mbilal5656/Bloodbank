@@ -47,6 +47,8 @@ class _LoginPageState extends State<LoginPage> {
           // Set user session
           UserSession.userType = user['userType'];
           UserSession.email = user['email'];
+          UserSession.userName = user['name'];
+          UserSession.userId = user['id'];
 
           // Save session data
           await SessionManager.saveUserSession(
@@ -116,10 +118,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-        backgroundColor: AppTheme.primaryColor,
-      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,

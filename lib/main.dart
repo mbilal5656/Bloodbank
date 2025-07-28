@@ -1,31 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'db_helper.dart';
+import 'notification_helper.dart';
+import 'session_manager.dart';
 import 'splash_screen.dart';
+import 'home_page.dart';
 import 'login_page.dart';
 import 'signup_page.dart';
-import 'home_page.dart';
-import 'contact_page.dart';
-import 'forgot_password_page.dart';
-import 'profile_page.dart';
-import 'settings_page.dart';
 import 'admin_page.dart';
 import 'donor_page.dart';
 import 'receiver_page.dart';
+import 'profile_page.dart';
+import 'contact_page.dart';
+import 'settings_page.dart';
+import 'forgot_password_page.dart';
 import 'blood_inventory_page.dart';
 import 'notification_management_page.dart';
-import 'notification_helper.dart';
 import 'theme/app_theme.dart';
 
-import 'db_helper.dart';
+// Global user session class
+class UserSession {
+  static String userType = '';
+  static String email = '';
+  static String userName = '';
+  static int userId = 0;
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
+    // Initialize database with default admin user
     await DatabaseHelper.initializeDatabase();
+
+    // Initialize notifications
     await NotificationHelper.initializeNotifications();
+
+    // Load user session if exists
+    final sessionData = await SessionManager.getSessionData();
+    if (sessionData != null) {
+      UserSession.userId = sessionData['userId'] ?? 0;
+      UserSession.email = sessionData['email'] ?? '';
+      UserSession.userType = sessionData['userType'] ?? '';
+      UserSession.userName = sessionData['userName'] ?? '';
+    }
   } catch (e) {
-    // Handle initialization errors gracefully
-    print('Initialization error: $e');
+    print('Error initializing app: $e');
   }
 
   runApp(const BloodBankApp());
@@ -38,84 +58,31 @@ class BloodBankApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Blood Bank Management System',
-      theme: AppTheme.lightTheme,
-      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        useMaterial3: true,
+      ),
       initialRoute: '/splash',
-      onGenerateRoute: (settings) {
-        // Handle unknown routes gracefully
-        if (settings.name == '/splash') {
-          return MaterialPageRoute(builder: (context) => const SplashScreen());
-        }
-        if (settings.name == '/login') {
-          return MaterialPageRoute(builder: (context) => const LoginPage());
-        }
-        if (settings.name == '/signup') {
-          return MaterialPageRoute(builder: (context) => const SignupPage());
-        }
-        if (settings.name == '/donor') {
-          return MaterialPageRoute(builder: (context) => const DonorPage());
-        }
-        if (settings.name == '/receiver') {
-          return MaterialPageRoute(builder: (context) => const ReceiverPage());
-        }
-        if (settings.name == '/admin') {
-          return MaterialPageRoute(builder: (context) => const AdminPage());
-        }
-        if (settings.name == '/blood_inventory') {
-          return MaterialPageRoute(
-            builder: (context) => const BloodInventoryPage(),
-          );
-        }
-        if (settings.name == '/notification_management') {
-          return MaterialPageRoute(
-            builder: (context) => const NotificationManagementPage(),
-          );
-        }
-        if (settings.name == '/home') {
-          return MaterialPageRoute(builder: (context) => const HomePage());
-        }
-        if (settings.name == '/contact') {
-          return MaterialPageRoute(builder: (context) => const ContactPage());
-        }
-        if (settings.name == '/forgot_password') {
-          return MaterialPageRoute(
-            builder: (context) => const ForgotPasswordPage(),
-          );
-        }
-        if (settings.name == '/profile') {
-          return MaterialPageRoute(builder: (context) => const ProfilePage());
-        }
-        if (settings.name == '/settings') {
-          return MaterialPageRoute(builder: (context) => const SettingsPage());
-        }
-
-        // Default fallback
-        return MaterialPageRoute(builder: (context) => const HomePage());
-      },
       routes: {
         '/splash': (context) => const SplashScreen(),
+        '/home': (context) => const HomePage(),
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignupPage(),
+        '/admin': (context) => const AdminPage(),
         '/donor': (context) => const DonorPage(),
         '/receiver': (context) => const ReceiverPage(),
-        '/admin': (context) => const AdminPage(),
+        '/profile': (context) => const ProfilePage(),
+        '/contact': (context) => const ContactPage(),
+        '/settings': (context) => const SettingsPage(),
+        '/forgot_password': (context) => const ForgotPasswordPage(),
         '/blood_inventory': (context) => const BloodInventoryPage(),
         '/notification_management': (context) =>
             const NotificationManagementPage(),
-        '/home': (context) => const HomePage(),
-        '/contact': (context) => const ContactPage(),
-        '/forgot_password': (context) => const ForgotPasswordPage(),
-        '/profile': (context) => const ProfilePage(),
-        '/settings': (context) => const SettingsPage(),
       },
+      debugShowCheckedModeBanner: false,
     );
   }
-}
-
-// Simple user session (for backward compatibility)
-class UserSession {
-  static String? userType;
-  static String? email;
 }
 
 // Simulated Blood Inventory

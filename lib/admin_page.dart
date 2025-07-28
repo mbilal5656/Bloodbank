@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'db_helper.dart';
 import 'session_manager.dart';
+import 'notification_helper.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -23,6 +24,13 @@ class _AdminPageState extends State<AdminPage> {
   String _userType = 'Donor';
   bool _showAddUserForm = false;
 
+  // Notification form controllers
+  final _notificationTitleController = TextEditingController();
+  final _notificationMessageController = TextEditingController();
+  String _selectedNotificationType = 'info';
+  String _selectedTargetUserType = 'all';
+  bool _showNotificationForm = false;
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +45,8 @@ class _AdminPageState extends State<AdminPage> {
     _bloodGroupController.dispose();
     _ageController.dispose();
     _contactController.dispose();
+    _notificationTitleController.dispose();
+    _notificationMessageController.dispose();
     super.dispose();
   }
 
@@ -58,6 +68,66 @@ class _AdminPageState extends State<AdminPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading users: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendNotification() async {
+    if (_notificationTitleController.text.isEmpty ||
+        _notificationMessageController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill all notification fields'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final success = await NotificationHelper.addNotification(
+        title: _notificationTitleController.text.trim(),
+        message: _notificationMessageController.text.trim(),
+        type: _selectedNotificationType,
+        targetUserType: _selectedTargetUserType,
+      );
+
+      if (success) {
+        _notificationTitleController.clear();
+        _notificationMessageController.clear();
+        _selectedNotificationType = 'info';
+        _selectedTargetUserType = 'all';
+        
+        setState(() {
+          _showNotificationForm = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notification sent successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to send notification'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sending notification: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -361,15 +431,39 @@ class _AdminPageState extends State<AdminPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            _showAddUserForm = !_showAddUserForm;
-          });
-        },
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-        child: Icon(_showAddUserForm ? Icons.close : Icons.add),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: () {
+              setState(() {
+                _showNotificationForm = !_showNotificationForm;
+                if (!_showNotificationForm) {
+                  _notificationTitleController.clear();
+                  _notificationMessageController.clear();
+                  _selectedNotificationType = 'info';
+                  _selectedTargetUserType = 'all';
+                }
+              });
+            },
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            child: Icon(_showNotificationForm ? Icons.close : Icons.notifications),
+            tooltip: 'Send Notification',
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton(
+            onPressed: () {
+              setState(() {
+                _showAddUserForm = !_showAddUserForm;
+              });
+            },
+            backgroundColor: const Color(0xFF1A237E),
+            foregroundColor: Colors.white,
+            child: Icon(_showAddUserForm ? Icons.close : Icons.add),
+            tooltip: 'Add User',
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -399,6 +493,118 @@ class _AdminPageState extends State<AdminPage> {
                     ],
                   ),
                   const SizedBox(height: 20),
+
+                  // Notification Form
+                  if (_showNotificationForm) ...[
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Send Notification',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    color: const Color(0xFF1A237E),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _notificationTitleController,
+                              decoration: const InputDecoration(
+                                labelText: 'Notification Title',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _notificationMessageController,
+                              decoration: const InputDecoration(
+                                labelText: 'Notification Message',
+                                border: OutlineInputBorder(),
+                              ),
+                              maxLines: 3,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedNotificationType,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Type',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: ['info', 'success', 'warning', 'urgent']
+                                        .map((type) => DropdownMenuItem(
+                                              value: type,
+                                              child: Text(type.toUpperCase()),
+                                            ))
+                                        .toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedNotificationType = value!;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedTargetUserType,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Target',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: ['all', 'Donor', 'Receiver', 'Admin']
+                                        .map((type) => DropdownMenuItem(
+                                              value: type,
+                                              child: Text(type == 'all' ? 'All Users' : type),
+                                            ))
+                                        .toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedTargetUserType = value!;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: _sendNotification,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Send Notification'),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _showNotificationForm = false;
+                                      });
+                                    },
+                                    child: const Text('Cancel'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Blood Inventory Summary
                   Card(
