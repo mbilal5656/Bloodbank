@@ -25,8 +25,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
+    debugPrint('Login button pressed');
+    debugPrint('Email: ${_emailController.text}');
+    debugPrint('Password: ${_passwordController.text}');
+
     // Simple validation first
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      debugPrint('Validation failed: Empty email or password');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter both email and password'),
@@ -36,25 +41,32 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    debugPrint('Validation passed, starting login process');
     setState(() {
       _isLoading = true;
     });
 
     try {
+      debugPrint('Creating DataService instance');
       final dataService = DataService();
+      debugPrint('Checking if user exists...');
       // Check if user exists
       final user = await dataService.getUserByEmail(
         _emailController.text.trim(),
       );
 
       if (user != null) {
+        debugPrint('User found: ${user.name} (${user.email})');
         // Authenticate user
+        debugPrint('Attempting authentication...');
         final isAuthenticated = await dataService.authenticateUser(
           _emailController.text.trim(),
           _passwordController.text,
         );
 
+        debugPrint('Authentication result: $isAuthenticated');
         if (isAuthenticated) {
+          debugPrint('Authentication successful, setting user session');
           // Set user session
           UserSession.userType = user.userType;
           UserSession.email = user.email;
