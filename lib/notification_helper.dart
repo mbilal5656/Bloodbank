@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'theme/app_theme.dart';
 
 class NotificationHelper {
   static const String _notificationsKey = 'notifications';
@@ -14,94 +13,78 @@ class NotificationHelper {
       final notificationsJson = prefs.getString(_notificationsKey);
 
       if (notificationsJson == null) {
-        // Create default notifications
-        final defaultNotifications = [
-          {
-            'id': 1,
-            'title': 'Welcome to Blood Bank System',
-            'message': 'Thank you for using our blood bank management system.',
-            'type': 'info',
-            'timestamp': DateTime.now().toIso8601String(),
-            'read': false,
-            'targetUserType': 'all',
-          },
-        ];
-
-        await prefs.setString(_notificationsKey, jsonEncode(defaultNotifications));
-        await prefs.setInt(_nextNotificationIdKey, 2);
+        // Initialize empty notifications list
+        await prefs.setString(_notificationsKey, '[]');
+        await prefs.setInt(_nextNotificationIdKey, 1);
+        debugPrint('Notifications initialized successfully');
       }
     } catch (e) {
-      print('Error initializing notifications: $e');
-      // Don't rethrow to allow app to continue
+      debugPrint('Error initializing notifications: $e');
     }
   }
 
-  // Get all notifications
-  static Future<List<Map<String, dynamic>>> getAllNotifications() async {
+  // Add notification
+  static Future<bool> addNotification({
+    required String title,
+    required String message,
+    required String type,
+    int? userId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final notificationsJson = prefs.getString(_notificationsKey);
+      final nextId = prefs.getInt(_nextNotificationIdKey) ?? 1;
+
+      final List<dynamic> notifications = notificationsJson != null
+          ? jsonDecode(notificationsJson)
+          : [];
+
+      final notification = {
+        'id': nextId,
+        'title': title,
+        'message': message,
+        'type': type,
+        'userId': userId,
+        'isRead': false,
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+
+      notifications.add(notification);
+
+      await prefs.setString(_notificationsKey, jsonEncode(notifications));
+      await prefs.setInt(_nextNotificationIdKey, nextId + 1);
+
+      debugPrint('Notification added successfully: $title');
+      return true;
+    } catch (e) {
+      debugPrint('Error adding notification: $e');
+      return false;
+    }
+  }
+
+  // Get notifications for user
+  static Future<List<Map<String, dynamic>>> getNotificationsForUser(
+    int userId,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final notificationsJson = prefs.getString(_notificationsKey);
 
       if (notificationsJson != null) {
-        final List<dynamic> decoded = jsonDecode(notificationsJson);
-        return decoded.cast<Map<String, dynamic>>();
+        final List<dynamic> notifications = jsonDecode(notificationsJson);
+        return notifications
+            .where(
+              (notification) =>
+                  notification['userId'] == userId ||
+                  notification['userId'] == null,
+            )
+            .cast<Map<String, dynamic>>()
+            .toList();
       }
       return [];
     } catch (e) {
-      print('Error getting all notifications: $e');
+      debugPrint('Error getting notifications for user: $e');
       return [];
-    }
-  }
-
-  // Get notifications by user type
-  static Future<List<Map<String, dynamic>>> getNotificationsByUserType(String userType) async {
-    try {
-      final notifications = await getAllNotifications();
-      return notifications.where((notification) {
-        final targetType = notification['targetUserType'];
-        return targetType == 'all' || targetType == userType;
-      }).toList();
-    } catch (e) {
-      print('Error getting notifications by user type: $e');
-      return [];
-    }
-  }
-
-  // Add new notification
-  static Future<bool> addNotification({
-    required String title,
-    required String message,
-    required String type,
-    required String targetUserType,
-  }) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final notifications = await getAllNotifications();
-
-      // Get next notification ID
-      final nextId = prefs.getInt(_nextNotificationIdKey) ?? notifications.length + 1;
-
-      // Create new notification
-      final newNotification = {
-        'id': nextId,
-        'title': title,
-        'message': message,
-        'type': type,
-        'timestamp': DateTime.now().toIso8601String(),
-        'read': false,
-        'targetUserType': targetUserType,
-      };
-
-      notifications.add(newNotification);
-
-      // Save updated notifications list
-      await prefs.setString(_notificationsKey, jsonEncode(notifications));
-      await prefs.setInt(_nextNotificationIdKey, nextId + 1);
-
-      return true;
-    } catch (e) {
-      print('Error adding notification: $e');
-      return false;
     }
   }
 
@@ -109,101 +92,98 @@ class NotificationHelper {
   static Future<bool> markNotificationAsRead(int notificationId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final notifications = await getAllNotifications();
+      final notificationsJson = prefs.getString(_notificationsKey);
 
-      final notificationIndex = notifications.indexWhere((notification) => notification['id'] == notificationId);
-      if (notificationIndex != -1) {
-        notifications[notificationIndex]['read'] = true;
+      if (notificationsJson != null) {
+        final List<dynamic> notifications = jsonDecode(notificationsJson);
+        final notificationIndex = notifications.indexWhere(
+          (n) => n['id'] == notificationId,
+        );
 
-        await prefs.setString(_notificationsKey, jsonEncode(notifications));
-        return true;
+        if (notificationIndex != -1) {
+          notifications[notificationIndex]['isRead'] = true;
+          await prefs.setString(_notificationsKey, jsonEncode(notifications));
+          debugPrint('Notification marked as read: $notificationId');
+          return true;
+        }
       }
       return false;
     } catch (e) {
-      print('Error marking notification as read: $e');
-      return false;
-    }
-  }
-
-  // Delete notification
-  static Future<bool> deleteNotification(int notificationId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final notifications = await getAllNotifications();
-
-      final notificationIndex = notifications.indexWhere((notification) => notification['id'] == notificationId);
-      if (notificationIndex != -1) {
-        notifications.removeAt(notificationIndex);
-
-        await prefs.setString(_notificationsKey, jsonEncode(notifications));
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Error deleting notification: $e');
+      debugPrint('Error marking notification as read: $e');
       return false;
     }
   }
 
   // Get unread notifications count
-  static Future<int> getUnreadNotificationsCount(String userType) async {
+  static Future<int> getUnreadNotificationsCount(int userId) async {
     try {
-      final notifications = await getNotificationsByUserType(userType);
-      return notifications.where((notification) => notification['read'] == false).length;
+      final notifications = await getNotificationsForUser(userId);
+      return notifications
+          .where((notification) => !notification['isRead'])
+          .length;
     } catch (e) {
-      print('Error getting unread notifications count: $e');
+      debugPrint('Error getting unread notifications count: $e');
       return 0;
     }
   }
 
+  // Clear all notifications for user
+  static Future<bool> clearNotificationsForUser(int userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final notificationsJson = prefs.getString(_notificationsKey);
+
+      if (notificationsJson != null) {
+        final List<dynamic> notifications = jsonDecode(notificationsJson);
+        final filteredNotifications = notifications
+            .where((notification) => notification['userId'] != userId)
+            .toList();
+
+        await prefs.setString(
+          _notificationsKey,
+          jsonEncode(filteredNotifications),
+        );
+        debugPrint('Notifications cleared for user: $userId');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error clearing notifications for user: $e');
+      return false;
+    }
+  }
+
+  // Show notification snackbar
+  static void showNotificationSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   // Show notification dialog
-  static void showNotificationDialog(BuildContext context, Map<String, dynamic> notification) {
-    showDialog(
+  static Future<void> showNotificationDialog(
+    BuildContext context,
+    String title,
+    String message,
+  ) async {
+    return showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(notification['title']),
-          content: Text(notification['message']),
+          title: Text(title),
+          content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+              child: const Text('OK'),
             ),
           ],
         );
       },
     );
   }
-
-  // Get notification color based on type
-  static Color getNotificationColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'success':
-        return AppTheme.successColor;
-      case 'error':
-        return AppTheme.errorColor;
-      case 'warning':
-        return AppTheme.warningColor;
-      case 'info':
-        return AppTheme.infoColor;
-      default:
-        return AppTheme.primaryColor;
-    }
-  }
-
-  // Get notification icon based on type
-  static IconData getNotificationIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'success':
-        return Icons.check_circle;
-      case 'error':
-        return Icons.error;
-      case 'warning':
-        return Icons.warning;
-      case 'info':
-        return Icons.info;
-      default:
-        return Icons.notifications;
-    }
-  }
-} 
+}

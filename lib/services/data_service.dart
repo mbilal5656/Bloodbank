@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../db_helper.dart';
 import '../models/user_model.dart';
 import '../models/blood_inventory_model.dart';
@@ -11,13 +12,13 @@ class DataService {
 
   // ===== USER OPERATIONS =====
 
-  // Get all users with proper error handling
+  // Get all users
   Future<List<UserModel>> getAllUsers() async {
     try {
       final users = await _dbHelper.getAllUsers();
       return users.map((user) => UserModel.fromMap(user)).toList();
     } catch (e) {
-      print('DataService: Error getting all users: $e');
+      debugPrint('Error getting all users: $e');
       return [];
     }
   }
@@ -28,7 +29,7 @@ class DataService {
       final user = await _dbHelper.getUserByEmail(email);
       return user != null ? UserModel.fromMap(user) : null;
     } catch (e) {
-      print('DataService: Error getting user by email: $e');
+      debugPrint('Error getting user by email: $e');
       return null;
     }
   }
@@ -39,7 +40,7 @@ class DataService {
       final user = await _dbHelper.getUserById(userId);
       return user != null ? UserModel.fromMap(user) : null;
     } catch (e) {
-      print('DataService: Error getting user by ID: $e');
+      debugPrint('Error getting user by ID: $e');
       return null;
     }
   }
@@ -49,7 +50,7 @@ class DataService {
     try {
       return await _dbHelper.authenticateUser(email, password);
     } catch (e) {
-      print('DataService: Error authenticating user: $e');
+      debugPrint('Error authenticating user: $e');
       return false;
     }
   }
@@ -59,17 +60,17 @@ class DataService {
     try {
       return await _dbHelper.insertUser(user.toMap());
     } catch (e) {
-      print('DataService: Error creating user: $e');
+      debugPrint('Error creating user: $e');
       return false;
     }
   }
 
   // Update user
-  Future<bool> updateUser(int userId, Map<String, dynamic> userData) async {
+  Future<bool> updateUser(int userId, Map<String, dynamic> data) async {
     try {
-      return await _dbHelper.updateUser(userId, userData);
+      return await _dbHelper.updateUser(userId, data);
     } catch (e) {
-      print('DataService: Error updating user: $e');
+      debugPrint('Error updating user: $e');
       return false;
     }
   }
@@ -79,7 +80,7 @@ class DataService {
     try {
       return await _dbHelper.deleteUser(userId);
     } catch (e) {
-      print('DataService: Error deleting user: $e');
+      debugPrint('Error deleting user: $e');
       return false;
     }
   }
@@ -90,7 +91,7 @@ class DataService {
       final users = await _dbHelper.getUsersByType(userType);
       return users.map((user) => UserModel.fromMap(user)).toList();
     } catch (e) {
-      print('DataService: Error getting users by type: $e');
+      debugPrint('Error getting users by type: $e');
       return [];
     }
   }
@@ -100,17 +101,21 @@ class DataService {
     try {
       return await _dbHelper.emailExists(email);
     } catch (e) {
-      print('DataService: Error checking email existence: $e');
+      debugPrint('Error checking email existence: $e');
       return false;
     }
   }
 
   // Change password
-  Future<bool> changePassword(int userId, String oldPassword, String newPassword) async {
+  Future<bool> changePassword(
+    int userId,
+    String oldPassword,
+    String newPassword,
+  ) async {
     try {
       return await _dbHelper.changePassword(userId, oldPassword, newPassword);
     } catch (e) {
-      print('DataService: Error changing password: $e');
+      debugPrint('Error changing password: $e');
       return false;
     }
   }
@@ -121,20 +126,24 @@ class DataService {
   Future<List<BloodInventoryModel>> getAllBloodInventory() async {
     try {
       final inventory = await _dbHelper.getAllBloodInventory();
-      return inventory.map((item) => BloodInventoryModel.fromMap(item)).toList();
+      return inventory
+          .map((item) => BloodInventoryModel.fromMap(item))
+          .toList();
     } catch (e) {
-      print('DataService: Error getting blood inventory: $e');
+      debugPrint('Error getting all blood inventory: $e');
       return [];
     }
   }
 
   // Get blood inventory by group
-  Future<BloodInventoryModel?> getBloodInventoryByGroup(String bloodGroup) async {
+  Future<BloodInventoryModel?> getBloodInventoryByGroup(
+    String bloodGroup,
+  ) async {
     try {
       final inventory = await _dbHelper.getBloodInventoryByGroup(bloodGroup);
       return inventory != null ? BloodInventoryModel.fromMap(inventory) : null;
     } catch (e) {
-      print('DataService: Error getting blood inventory by group: $e');
+      debugPrint('Error getting blood inventory by group: $e');
       return null;
     }
   }
@@ -144,27 +153,27 @@ class DataService {
     try {
       return await _dbHelper.updateBloodInventory(id, data);
     } catch (e) {
-      print('DataService: Error updating blood inventory: $e');
+      debugPrint('Error updating blood inventory: $e');
       return false;
     }
   }
 
-  // Add new blood inventory item
+  // Add blood inventory
   Future<bool> addBloodInventory(BloodInventoryModel inventory) async {
     try {
       return await _dbHelper.addBloodInventory(inventory.toMap());
     } catch (e) {
-      print('DataService: Error adding blood inventory: $e');
+      debugPrint('Error adding blood inventory: $e');
       return false;
     }
   }
 
-  // Delete blood inventory item
+  // Delete blood inventory
   Future<bool> deleteBloodInventory(int id) async {
     try {
       return await _dbHelper.deleteBloodInventory(id);
     } catch (e) {
-      print('DataService: Error deleting blood inventory: $e');
+      debugPrint('Error deleting blood inventory: $e');
       return false;
     }
   }
@@ -173,9 +182,11 @@ class DataService {
   Future<List<BloodInventoryModel>> searchBloodInventory(String query) async {
     try {
       final inventory = await _dbHelper.searchBloodInventory(query);
-      return inventory.map((item) => BloodInventoryModel.fromMap(item)).toList();
+      return inventory
+          .map((item) => BloodInventoryModel.fromMap(item))
+          .toList();
     } catch (e) {
-      print('DataService: Error searching blood inventory: $e');
+      debugPrint('Error searching blood inventory: $e');
       return [];
     }
   }
@@ -185,7 +196,7 @@ class DataService {
     try {
       return await _dbHelper.getBloodInventorySummary();
     } catch (e) {
-      print('DataService: Error getting blood inventory summary: $e');
+      debugPrint('Error getting blood inventory summary: $e');
       return {};
     }
   }
@@ -197,7 +208,7 @@ class DataService {
     try {
       return await _dbHelper.addDonation(donationData);
     } catch (e) {
-      print('DataService: Error adding donation: $e');
+      debugPrint('Error adding donation: $e');
       return false;
     }
   }
@@ -207,7 +218,7 @@ class DataService {
     try {
       return await _dbHelper.getDonationsByDonor(donorId);
     } catch (e) {
-      print('DataService: Error getting donations by donor: $e');
+      debugPrint('Error getting donations by donor: $e');
       return [];
     }
   }
@@ -219,17 +230,19 @@ class DataService {
     try {
       return await _dbHelper.addBloodRequest(requestData);
     } catch (e) {
-      print('DataService: Error adding blood request: $e');
+      debugPrint('Error adding blood request: $e');
       return false;
     }
   }
 
   // Get requests by requester
-  Future<List<Map<String, dynamic>>> getRequestsByRequester(int requesterId) async {
+  Future<List<Map<String, dynamic>>> getRequestsByRequester(
+    int requesterId,
+  ) async {
     try {
       return await _dbHelper.getRequestsByRequester(requesterId);
     } catch (e) {
-      print('DataService: Error getting requests by requester: $e');
+      debugPrint('Error getting requests by requester: $e');
       return [];
     }
   }
@@ -241,7 +254,7 @@ class DataService {
     try {
       return await _dbHelper.addNotification(notificationData);
     } catch (e) {
-      print('DataService: Error adding notification: $e');
+      debugPrint('Error adding notification: $e');
       return false;
     }
   }
@@ -251,7 +264,7 @@ class DataService {
     try {
       return await _dbHelper.getNotificationsByUser(userId);
     } catch (e) {
-      print('DataService: Error getting notifications by user: $e');
+      debugPrint('Error getting notifications by user: $e');
       return [];
     }
   }
@@ -261,7 +274,7 @@ class DataService {
     try {
       return await _dbHelper.markNotificationAsRead(notificationId);
     } catch (e) {
-      print('DataService: Error marking notification as read: $e');
+      debugPrint('Error marking notification as read: $e');
       return false;
     }
   }
@@ -272,9 +285,9 @@ class DataService {
   static Future<void> initializeDatabase() async {
     try {
       await DatabaseHelper.initializeDatabase();
-      print('DataService: Database initialized successfully');
+      debugPrint('Database initialized successfully');
     } catch (e) {
-      print('DataService: Error initializing database: $e');
+      debugPrint('Error initializing database: $e');
       rethrow;
     }
   }
@@ -283,9 +296,9 @@ class DataService {
   Future<void> close() async {
     try {
       await _dbHelper.close();
-      print('DataService: Database closed successfully');
+      debugPrint('Database closed successfully');
     } catch (e) {
-      print('DataService: Error closing database: $e');
+      debugPrint('Error closing database: $e');
     }
   }
 
@@ -294,88 +307,88 @@ class DataService {
     try {
       final users = await getAllUsers();
       final inventory = await getAllBloodInventory();
-      final donations = await _dbHelper.getDonationsByDonor(1); // Sample query
-      final requests = await _dbHelper.getRequestsByRequester(1); // Sample query
 
       return {
         'totalUsers': users.length,
         'totalInventory': inventory.length,
-        'totalDonations': donations.length,
-        'totalRequests': requests.length,
         'adminUsers': users.where((u) => u.isAdmin).length,
         'donorUsers': users.where((u) => u.isDonor).length,
         'receiverUsers': users.where((u) => u.isReceiver).length,
-        'availableBlood': inventory.where((i) => i.isAvailable).length,
-        'lowStockBlood': inventory.where((i) => i.isLow).length,
-        'criticalBlood': inventory.where((i) => i.isCritical).length,
+        'availableBloodGroups': inventory.where((i) => i.isAvailable).length,
+        'lowStockGroups': inventory.where((i) => i.isLow).length,
+        'criticalStockGroups': inventory.where((i) => i.isCritical).length,
       };
     } catch (e) {
-      print('DataService: Error getting database stats: $e');
+      debugPrint('Error getting database stats: $e');
       return {};
     }
   }
 
   // Validate user data
   static bool validateUserData(Map<String, dynamic> userData) {
-    final requiredFields = ['name', 'email', 'password', 'userType'];
-    
-    for (final field in requiredFields) {
-      if (userData[field] == null || userData[field].toString().isEmpty) {
-        print('DataService: Missing required field: $field');
+    try {
+      final name = userData['name']?.toString() ?? '';
+      final email = userData['email']?.toString() ?? '';
+      final password = userData['password']?.toString() ?? '';
+      final userType = userData['userType']?.toString() ?? '';
+
+      if (name.isEmpty ||
+          email.isEmpty ||
+          password.isEmpty ||
+          userType.isEmpty) {
         return false;
       }
-    }
 
-    // Validate email format
-    final email = userData['email'].toString();
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      print('DataService: Invalid email format: $email');
+      // Basic email validation
+      if (!email.contains('@') || !email.contains('.')) {
+        return false;
+      }
+
+      // Password length validation
+      if (password.length < 6) {
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error validating user data: $e');
       return false;
     }
-
-    // Validate password strength
-    final password = userData['password'].toString();
-    if (password.length < 6) {
-      print('DataService: Password too short');
-      return false;
-    }
-
-    // Validate user type
-    final userType = userData['userType'].toString();
-    if (!['Admin', 'Donor', 'Receiver'].contains(userType)) {
-      print('DataService: Invalid user type: $userType');
-      return false;
-    }
-
-    return true;
   }
 
   // Validate blood inventory data
   static bool validateBloodInventoryData(Map<String, dynamic> inventoryData) {
-    final requiredFields = ['bloodGroup', 'quantity'];
-    
-    for (final field in requiredFields) {
-      if (inventoryData[field] == null) {
-        print('DataService: Missing required field: $field');
+    try {
+      final bloodGroup = inventoryData['bloodGroup']?.toString() ?? '';
+      final quantity = inventoryData['quantity'];
+
+      if (bloodGroup.isEmpty) {
         return false;
       }
-    }
 
-    // Validate blood group
-    final bloodGroup = inventoryData['bloodGroup'].toString();
-    final validBloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-    if (!validBloodGroups.contains(bloodGroup)) {
-      print('DataService: Invalid blood group: $bloodGroup');
+      if (quantity == null || quantity is! int || quantity < 0) {
+        return false;
+      }
+
+      // Validate blood group format
+      final validBloodGroups = [
+        'A+',
+        'A-',
+        'B+',
+        'B-',
+        'AB+',
+        'AB-',
+        'O+',
+        'O-',
+      ];
+      if (!validBloodGroups.contains(bloodGroup)) {
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error validating blood inventory data: $e');
       return false;
     }
-
-    // Validate quantity
-    final quantity = inventoryData['quantity'];
-    if (quantity is! int || quantity < 0) {
-      print('DataService: Invalid quantity: $quantity');
-      return false;
-    }
-
-    return true;
   }
-} 
+}

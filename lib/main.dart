@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'db_helper.dart';
 import 'services/data_service.dart';
 import 'notification_helper.dart';
 import 'session_manager.dart';
@@ -17,7 +15,6 @@ import 'settings_page.dart';
 import 'forgot_password_page.dart';
 import 'blood_inventory_page.dart';
 import 'notification_management_page.dart';
-import 'theme/app_theme.dart';
 
 // Global user session class
 class UserSession {
@@ -39,16 +36,16 @@ void main() async {
 
     // Load user session if exists
     final sessionData = await SessionManager.getSessionData();
-    if (sessionData != null) {
+    if (sessionData.isNotEmpty) {
       UserSession.userId = sessionData['userId'] ?? 0;
       UserSession.email = sessionData['email'] ?? '';
       UserSession.userType = sessionData['userType'] ?? '';
       UserSession.userName = sessionData['userName'] ?? '';
     }
 
-    print('Blood Bank App initialized successfully');
+    debugPrint('Blood Bank App initialized successfully');
   } catch (e) {
-    print('Error initializing app: $e');
+    debugPrint('Error initializing app: $e');
     // Continue with app launch even if there are initialization errors
   }
 
@@ -97,7 +94,7 @@ class BloodInventory {
     try {
       return await _dataService.getBloodInventorySummary();
     } catch (e) {
-      print('Error getting blood stock: $e');
+      debugPrint('Error getting blood stock: $e');
       return {};
     }
   }
@@ -107,7 +104,7 @@ class BloodInventory {
       final inventory = await _dataService.getBloodInventoryByGroup(bloodType);
       return inventory != null && inventory.isAvailable;
     } catch (e) {
-      print('Error checking blood availability: $e');
+      debugPrint('Error checking blood availability: $e');
       return false;
     }
   }
@@ -122,7 +119,7 @@ class BloodInventory {
       }
       return false;
     } catch (e) {
-      print('Error updating blood stock: $e');
+      debugPrint('Error updating blood stock: $e');
       return false;
     }
   }
@@ -150,7 +147,7 @@ class DonorEligibility {
       );
       return isAvailable;
     } catch (e) {
-      print('Error checking donor eligibility: $e');
+      debugPrint('Error checking donor eligibility: $e');
       return false;
     }
   }
@@ -167,7 +164,7 @@ class DonorEligibility {
 
       return lastDonationDate.isBefore(threeMonthsAgo);
     } catch (e) {
-      print('Error checking donor history: $e');
+      debugPrint('Error checking donor history: $e');
       return false;
     }
   }
@@ -182,7 +179,7 @@ class DatabaseUtils {
     try {
       return await _dataService.getDatabaseStats();
     } catch (e) {
-      print('Error getting database stats: $e');
+      debugPrint('Error getting database stats: $e');
       return {};
     }
   }
@@ -202,7 +199,7 @@ class DatabaseUtils {
     try {
       await _dataService.close();
     } catch (e) {
-      print('Error closing database: $e');
+      debugPrint('Error closing database: $e');
     }
   }
 }

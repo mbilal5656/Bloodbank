@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'utils/secure_code_generator.dart';
 import 'notification_helper.dart';
 import 'session_manager.dart';
-import 'theme/app_theme.dart';
+import 'main.dart' show UserSession;
+import 'utils/secure_code_generator.dart';
 
 class ReceiverPage extends StatefulWidget {
   const ReceiverPage({super.key});
@@ -13,34 +13,19 @@ class ReceiverPage extends StatefulWidget {
 
 class _ReceiverPageState extends State<ReceiverPage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _bloodGroupController = TextEditingController();
-  final _contactController = TextEditingController();
+  final _patientNameController = TextEditingController();
   final _hospitalController = TextEditingController();
-  final _urgencyController = TextEditingController();
+  final _contactController = TextEditingController();
   final _verificationCodeController = TextEditingController();
 
-  String _selectedBloodGroup = 'A+';
-  String _selectedUrgency = 'Normal';
-  String? _requestCode;
-  bool _isAvailable = false;
-  bool _isLoading = false;
   List<Map<String, dynamic>> _notifications = [];
   int _unreadNotificationsCount = 0;
+  bool _isAvailable = false;
+  bool _isLoading = false;
+  String? _requestCode;
+  String _selectedBloodGroup = 'A+';
+  String _selectedUrgency = 'Normal';
 
-  final List<String> _bloodGroups = [
-    'A+',
-    'A-',
-    'B+',
-    'B-',
-    'AB+',
-    'AB-',
-    'O+',
-    'O-',
-  ];
-  final List<String> _urgencyLevels = ['Normal', 'Urgent', 'Emergency'];
-
-  // Simulated blood inventory
   final Map<String, int> _bloodInventory = {
     'A+': 15,
     'A-': 8,
@@ -60,28 +45,25 @@ class _ReceiverPageState extends State<ReceiverPage> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _bloodGroupController.dispose();
-    _contactController.dispose();
+    _patientNameController.dispose();
     _hospitalController.dispose();
-    _urgencyController.dispose();
+    _contactController.dispose();
     _verificationCodeController.dispose();
     super.dispose();
   }
 
   Future<void> _loadNotifications() async {
     try {
-      final userType = await SessionManager.getUserType();
-      if (userType != null) {
-        final notifications =
-            await NotificationHelper.getNotificationsByUserType(userType);
-        final unreadCount =
-            await NotificationHelper.getUnreadNotificationsCount(userType);
-        setState(() {
-          _notifications = notifications;
-          _unreadNotificationsCount = unreadCount;
-        });
-      }
+      final notifications = await NotificationHelper.getNotificationsForUser(
+        UserSession.userId,
+      );
+      final unreadCount = await NotificationHelper.getUnreadNotificationsCount(
+        UserSession.userId,
+      );
+      setState(() {
+        _notifications = notifications;
+        _unreadNotificationsCount = unreadCount;
+      });
     } catch (e) {
       // Handle error silently
     }
@@ -101,34 +83,33 @@ class _ReceiverPageState extends State<ReceiverPage> {
                   itemCount: _notifications.length,
                   itemBuilder: (context, index) {
                     final notification = _notifications[index];
+                    final isRead = notification['isRead'] ?? false;
+                    final type = notification['type'] ?? 'info';
+
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor:
-                            NotificationHelper.getNotificationColor(
-                              notification['type'],
-                            ),
+                        backgroundColor: _getNotificationColor(type),
                         child: Icon(
-                          NotificationHelper.getNotificationIcon(
-                            notification['type'],
-                          ),
-                          color: AppTheme.lightTextColor,
+                          _getNotificationIcon(type),
+                          color: Colors.white,
                         ),
                       ),
                       title: Text(
-                        notification['title'],
+                        notification['title'] ?? '',
                         style: TextStyle(
-                          fontWeight: notification['read']
+                          fontWeight: isRead
                               ? FontWeight.normal
                               : FontWeight.bold,
                         ),
                       ),
-                      subtitle: Text(notification['message']),
+                      subtitle: Text(notification['message'] ?? ''),
                       onTap: () {
                         NotificationHelper.showNotificationDialog(
                           context,
-                          notification,
+                          notification['title'] ?? '',
+                          notification['message'] ?? '',
                         );
-                        if (!notification['read']) {
+                        if (!isRead) {
                           NotificationHelper.markNotificationAsRead(
                             notification['id'],
                           );
@@ -147,6 +128,36 @@ class _ReceiverPageState extends State<ReceiverPage> {
         ],
       ),
     );
+  }
+
+  Color _getNotificationColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'success':
+        return Colors.green;
+      case 'error':
+        return Colors.red;
+      case 'warning':
+        return Colors.orange;
+      case 'info':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getNotificationIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'success':
+        return Icons.check_circle;
+      case 'error':
+        return Icons.error;
+      case 'warning':
+        return Icons.warning;
+      case 'info':
+        return Icons.info;
+      default:
+        return Icons.notifications;
+    }
   }
 
   void _checkAvailability() {
@@ -253,8 +264,8 @@ class _ReceiverPageState extends State<ReceiverPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Receiver Dashboard'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: AppTheme.lightTextColor,
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
         actions: [
           Stack(
             children: [
@@ -270,7 +281,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: AppTheme.errorColor,
+                      color: Colors.red,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     constraints: const BoxConstraints(
@@ -302,7 +313,13 @@ class _ReceiverPageState extends State<ReceiverPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: AppTheme.primaryGradientDecoration,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1A237E), Color(0xFF3949AB)],
+          ),
+        ),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -333,7 +350,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
 
                   // Form Fields
                   TextFormField(
-                    controller: _nameController,
+                    controller: _patientNameController,
                     decoration: InputDecoration(
                       labelText: 'Patient Name',
                       border: OutlineInputBorder(
@@ -377,14 +394,16 @@ class _ReceiverPageState extends State<ReceiverPage> {
                     ),
                     dropdownColor: const Color(0xFF1A237E),
                     style: const TextStyle(color: Colors.white),
-                    items: _bloodGroups
-                        .map(
-                          (group) => DropdownMenuItem(
-                            value: group,
-                            child: Text(group),
-                          ),
-                        )
-                        .toList(),
+                    items: const [
+                      DropdownMenuItem(value: 'A+', child: Text('A+')),
+                      DropdownMenuItem(value: 'A-', child: Text('A-')),
+                      DropdownMenuItem(value: 'B+', child: Text('B+')),
+                      DropdownMenuItem(value: 'B-', child: Text('B-')),
+                      DropdownMenuItem(value: 'AB+', child: Text('AB+')),
+                      DropdownMenuItem(value: 'AB-', child: Text('AB-')),
+                      DropdownMenuItem(value: 'O+', child: Text('O+')),
+                      DropdownMenuItem(value: 'O-', child: Text('O-')),
+                    ],
                     onChanged: (value) {
                       setState(() {
                         _selectedBloodGroup = value!;
@@ -468,14 +487,14 @@ class _ReceiverPageState extends State<ReceiverPage> {
                     ),
                     dropdownColor: const Color(0xFF1A237E),
                     style: const TextStyle(color: Colors.white),
-                    items: _urgencyLevels
-                        .map(
-                          (level) => DropdownMenuItem(
-                            value: level,
-                            child: Text(level),
-                          ),
-                        )
-                        .toList(),
+                    items: const [
+                      DropdownMenuItem(value: 'Normal', child: Text('Normal')),
+                      DropdownMenuItem(value: 'Urgent', child: Text('Urgent')),
+                      DropdownMenuItem(
+                        value: 'Emergency',
+                        child: Text('Emergency'),
+                      ),
+                    ],
                     onChanged: (value) {
                       setState(() {
                         _selectedUrgency = value!;

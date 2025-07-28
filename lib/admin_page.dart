@@ -92,7 +92,7 @@ class _AdminPageState extends State<AdminPage> {
         title: _notificationTitleController.text.trim(),
         message: _notificationMessageController.text.trim(),
         type: _selectedNotificationType,
-        targetUserType: _selectedTargetUserType,
+        userId: null, // Send to all users
       );
 
       if (success) {
@@ -448,8 +448,8 @@ class _AdminPageState extends State<AdminPage> {
             },
             backgroundColor: Colors.orange,
             foregroundColor: Colors.white,
-            child: Icon(_showNotificationForm ? Icons.close : Icons.notifications),
             tooltip: 'Send Notification',
+            child: Icon(_showNotificationForm ? Icons.close : Icons.notifications),
           ),
           const SizedBox(height: 16),
           FloatingActionButton(
@@ -460,8 +460,8 @@ class _AdminPageState extends State<AdminPage> {
             },
             backgroundColor: const Color(0xFF1A237E),
             foregroundColor: Colors.white,
-            child: Icon(_showAddUserForm ? Icons.close : Icons.add),
             tooltip: 'Add User',
+            child: Icon(_showAddUserForm ? Icons.close : Icons.add),
           ),
         ],
       ),

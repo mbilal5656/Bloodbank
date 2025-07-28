@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:crypto/crypto.dart';
@@ -127,7 +128,7 @@ class DatabaseHelper {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < newVersion) {
       // Add migration logic here if needed
-      print('Database upgraded from version $oldVersion to $newVersion');
+      debugPrint('Database upgraded from version $oldVersion to $newVersion');
     }
   }
 
@@ -178,9 +179,9 @@ class DatabaseHelper {
     try {
       final dbHelper = DatabaseHelper();
       await dbHelper.database;
-      print('Database initialized successfully');
+      debugPrint('Database initialized successfully');
     } catch (e) {
-      print('Database initialization error: $e');
+      debugPrint('Database initialization error: $e');
       rethrow;
     }
   }
@@ -194,7 +195,7 @@ class DatabaseHelper {
       final result = await db.query(_usersTable, orderBy: 'createdAt DESC');
       return result;
     } catch (e) {
-      print('Error getting all users: $e');
+      debugPrint('Error getting all users: $e');
       return [];
     }
   }
@@ -210,7 +211,7 @@ class DatabaseHelper {
       );
       return result.isNotEmpty ? result.first : null;
     } catch (e) {
-      print('Error getting user by email: $e');
+      debugPrint('Error getting user by email: $e');
       return null;
     }
   }
@@ -226,7 +227,7 @@ class DatabaseHelper {
       );
       return result.isNotEmpty ? result.first : null;
     } catch (e) {
-      print('Error getting user by ID: $e');
+      debugPrint('Error getting user by ID: $e');
       return null;
     }
   }
@@ -241,7 +242,7 @@ class DatabaseHelper {
       }
       return false;
     } catch (e) {
-      print('Authentication error: $e');
+      debugPrint('Authentication error: $e');
       return false;
     }
   }
@@ -270,7 +271,7 @@ class DatabaseHelper {
       final id = await db.insert(_usersTable, user);
       return id > 0;
     } catch (e) {
-      print('Error inserting user: $e');
+      debugPrint('Error inserting user: $e');
       return false;
     }
   }
@@ -295,7 +296,7 @@ class DatabaseHelper {
       );
       return count > 0;
     } catch (e) {
-      print('Error updating user: $e');
+      debugPrint('Error updating user: $e');
       return false;
     }
   }
@@ -311,7 +312,7 @@ class DatabaseHelper {
       );
       return count > 0;
     } catch (e) {
-      print('Error deleting user: $e');
+      debugPrint('Error deleting user: $e');
       return false;
     }
   }
@@ -328,7 +329,7 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      print('Error getting users by type: $e');
+      debugPrint('Error getting users by type: $e');
       return [];
     }
   }
@@ -339,7 +340,7 @@ class DatabaseHelper {
       final user = await getUserByEmail(email);
       return user != null;
     } catch (e) {
-      print('Error checking email existence: $e');
+      debugPrint('Error checking email existence: $e');
       return false;
     }
   }
@@ -357,7 +358,7 @@ class DatabaseHelper {
       final success = await updateUser(userId, {'password': newHashedPassword});
       return success;
     } catch (e) {
-      print('Error changing password: $e');
+      debugPrint('Error changing password: $e');
       return false;
     }
   }
@@ -374,7 +375,7 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      print('Error getting blood inventory: $e');
+      debugPrint('Error getting blood inventory: $e');
       return [];
     }
   }
@@ -390,7 +391,7 @@ class DatabaseHelper {
       );
       return result.isNotEmpty ? result.first : null;
     } catch (e) {
-      print('Error getting blood inventory by group: $e');
+      debugPrint('Error getting blood inventory by group: $e');
       return null;
     }
   }
@@ -409,7 +410,7 @@ class DatabaseHelper {
       );
       return count > 0;
     } catch (e) {
-      print('Error updating blood inventory: $e');
+      debugPrint('Error updating blood inventory: $e');
       return false;
     }
   }
@@ -430,7 +431,7 @@ class DatabaseHelper {
       final id = await db.insert(_bloodInventoryTable, inventory);
       return id > 0;
     } catch (e) {
-      print('Error adding blood inventory: $e');
+      debugPrint('Error adding blood inventory: $e');
       return false;
     }
   }
@@ -446,7 +447,7 @@ class DatabaseHelper {
       );
       return count > 0;
     } catch (e) {
-      print('Error deleting blood inventory: $e');
+      debugPrint('Error deleting blood inventory: $e');
       return false;
     }
   }
@@ -463,7 +464,7 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      print('Error searching blood inventory: $e');
+      debugPrint('Error searching blood inventory: $e');
       return [];
     }
   }
@@ -482,7 +483,7 @@ class DatabaseHelper {
       
       return summary;
     } catch (e) {
-      print('Error getting blood inventory summary: $e');
+      debugPrint('Error getting blood inventory summary: $e');
       return {};
     }
   }
@@ -506,7 +507,7 @@ class DatabaseHelper {
       final id = await db.insert(_donationsTable, donation);
       return id > 0;
     } catch (e) {
-      print('Error adding donation: $e');
+      debugPrint('Error adding donation: $e');
       return false;
     }
   }
@@ -523,7 +524,7 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      print('Error getting donations by donor: $e');
+      debugPrint('Error getting donations by donor: $e');
       return [];
     }
   }
@@ -550,7 +551,7 @@ class DatabaseHelper {
       final id = await db.insert(_requestsTable, request);
       return id > 0;
     } catch (e) {
-      print('Error adding blood request: $e');
+      debugPrint('Error adding blood request: $e');
       return false;
     }
   }
@@ -567,7 +568,7 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      print('Error getting requests by requester: $e');
+      debugPrint('Error getting requests by requester: $e');
       return [];
     }
   }
@@ -591,7 +592,7 @@ class DatabaseHelper {
       final id = await db.insert(_notificationsTable, notification);
       return id > 0;
     } catch (e) {
-      print('Error adding notification: $e');
+      debugPrint('Error adding notification: $e');
       return false;
     }
   }
@@ -608,7 +609,7 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      print('Error getting notifications by user: $e');
+      debugPrint('Error getting notifications by user: $e');
       return [];
     }
   }
@@ -625,14 +626,18 @@ class DatabaseHelper {
       );
       return count > 0;
     } catch (e) {
-      print('Error marking notification as read: $e');
+      debugPrint('Error marking notification as read: $e');
       return false;
     }
   }
 
   // Close database
   Future<void> close() async {
-    final db = await database;
-    await db.close();
+    try {
+      await _database?.close();
+      debugPrint('Database closed successfully');
+    } catch (e) {
+      debugPrint('Error closing database: $e');
+    }
   }
 }
