@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'db_helper.dart';
+import 'services/data_service.dart';
+import 'models/user_model.dart';
 import 'session_manager.dart';
 import 'notification_helper.dart';
 
@@ -52,11 +53,11 @@ class _AdminPageState extends State<AdminPage> {
 
   Future<void> _loadUsers() async {
     try {
-      final users = await DatabaseHelper().getAllUsers();
-      final bloodInventorySummary = await DatabaseHelper()
-          .getBloodInventorySummary();
+      final dataService = DataService();
+      final users = await dataService.getAllUsers();
+      final bloodInventorySummary = await dataService.getBloodInventorySummary();
       setState(() {
-        _users = users;
+        _users = users.map((user) => user.toMap()).toList();
         _bloodInventorySummary = bloodInventorySummary;
         _isLoading = false;
       });
@@ -137,7 +138,8 @@ class _AdminPageState extends State<AdminPage> {
 
   Future<void> _deleteUser(int userId) async {
     try {
-      await DatabaseHelper().deleteUser(userId);
+      final dataService = DataService();
+      await dataService.deleteUser(userId);
       await _loadUsers();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -163,8 +165,9 @@ class _AdminPageState extends State<AdminPage> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
+      final dataService = DataService();
       // Check if email already exists
-      final existingUser = await DatabaseHelper().getUserByEmail(
+      final existingUser = await dataService.getUserByEmail(
         _emailController.text.trim(),
       );
 
@@ -181,17 +184,21 @@ class _AdminPageState extends State<AdminPage> {
       }
 
       // Create new user
-      await DatabaseHelper().insertUser({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'password': _passwordController.text,
-        'userType': _userType,
-        'bloodGroup': _bloodGroupController.text.trim(),
-        'age': int.tryParse(_ageController.text) ?? 0,
-        'contactNumber': _userType == 'Admin'
+      final newUser = UserModel(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        userType: _userType,
+        bloodGroup: _bloodGroupController.text.trim(),
+        age: int.tryParse(_ageController.text) ?? 0,
+        contactNumber: _userType == 'Admin'
             ? 'N/A'
             : _contactController.text.trim(),
-      });
+        createdAt: DateTime.now().toIso8601String(),
+        updatedAt: DateTime.now().toIso8601String(),
+      );
+
+      await dataService.createUser(newUser);
 
       // Clear form
       _nameController.clear();
@@ -232,7 +239,8 @@ class _AdminPageState extends State<AdminPage> {
     final newPassword = 'Reset123!'; // Default reset password
 
     try {
-      await DatabaseHelper().updateUser(userId, {'password': newPassword});
+      final dataService = DataService();
+      await dataService.updateUser(userId, {'password': newPassword});
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -347,7 +355,8 @@ class _AdminPageState extends State<AdminPage> {
                 final scaffoldMessenger = ScaffoldMessenger.of(context);
                 final navigator = Navigator.of(dialogContext);
                 try {
-                  await DatabaseHelper().updateUser(user['id'], {
+                  final dataService = DataService();
+                  await dataService.updateUser(user['id'], {
                     'name': _nameController.text.trim(),
                     'email': _emailController.text.trim(),
                     'bloodGroup': _bloodGroupController.text.trim(),
