@@ -1,58 +1,277 @@
 {
     "version": "0.2.0",
     "configurations": [
+        // ===== WEB PLATFORMS =====
         {
-            "name": "Flutter (Chrome)",
+            "name": "Flutter Web (Chrome)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
                 "chrome",
-                "--web-port=8080"
-            ]
+                "--web-port=8080",
+                "--web-hostname=localhost"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
         },
         {
-            "name": "Flutter (Web Server)",
+            "name": "Flutter Web (Edge)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "edge",
+                "--web-port=8080",
+                "--web-hostname=localhost"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter Web (Firefox)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "firefox",
+                "--web-port=8080",
+                "--web-hostname=localhost"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter Web Server",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
                 "web-server",
-                "--web-port=8080"
-            ]
+                "--web-port=8080",
+                "--web-hostname=localhost"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
         },
+
+        // ===== MOBILE PLATFORMS =====
         {
-            "name": "Flutter (Android)",
+            "name": "Flutter Android (Device)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
-            "deviceId": "android"
+            "deviceId": "android",
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
         },
         {
-            "name": "Flutter (Windows)",
+            "name": "Flutter Android (Emulator)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "android"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter iOS (Device)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "ios"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter iOS (Simulator)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "ios"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+
+        // ===== DESKTOP PLATFORMS =====
+        {
+            "name": "Flutter Windows",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "-d",
                 "windows"
-            ]
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
         },
         {
-            "name": "Flutter (Profile Mode)",
+            "name": "Flutter macOS",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
-            "flutterMode": "profile"
+            "args": [
+                "-d",
+                "macos"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
         },
         {
-            "name": "Flutter (Release Mode)",
+            "name": "Flutter Linux",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
-            "flutterMode": "release"
+            "args": [
+                "-d",
+                "linux"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+
+        // ===== PERFORMANCE MODES =====
+        {
+            "name": "Flutter Profile Mode",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "profile",
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter Release Mode",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "release",
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+
+        // ===== HOT RELOAD CONFIGURATIONS =====
+        {
+            "name": "Flutter Hot Reload (Android)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "android",
+                "--hot"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter Hot Reload (iOS)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "ios",
+                "--hot"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter Hot Reload (Web)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "-d",
+                "chrome",
+                "--hot",
+                "--web-port=8080"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+
+        // ===== DEBUGGING CONFIGURATIONS =====
+        {
+            "name": "Flutter Debug Console",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "console": "debugConsole",
+            "args": [
+                "--verbose"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter Debug with Observatory",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--observatory-port=8888"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+
+        // ===== TESTING CONFIGURATIONS =====
+        {
+            "name": "Flutter Test",
+            "request": "launch",
+            "type": "dart",
+            "program": "test/widget_test.dart",
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter Test All",
+            "request": "launch",
+            "type": "dart",
+            "program": "test/",
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+
+        // ===== CUSTOM CONFIGURATIONS =====
+        {
+            "name": "Flutter with Custom Arguments",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define=ENVIRONMENT=development",
+                "--dart-define=API_URL=http://localhost:3000"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Flutter with Performance Overlay",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--enable-software-rendering",
+                "--skia-deterministic-rendering"
+            ],
+            "console": "debugConsole",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
