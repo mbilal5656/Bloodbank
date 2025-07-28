@@ -3,6 +3,7 @@ import 'services/data_service.dart';
 import 'models/user_model.dart';
 import 'session_manager.dart';
 import 'notification_helper.dart';
+import 'main.dart' show NavigationUtils, UserSession;
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -449,13 +450,19 @@ class _AdminPageState extends State<AdminPage> {
             tooltip: 'Notifications',
           ),
           IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () => NavigationUtils.navigateToProfile(context),
+            tooltip: 'Profile',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => NavigationUtils.navigateToSettings(context),
+            tooltip: 'Settings',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              final navigator = Navigator.of(context);
-              await SessionManager.clearSession();
-              if (mounted) {
-                navigator.pushReplacementNamed('/login');
-              }
+              await NavigationUtils.logout(context);
             },
           ),
         ],

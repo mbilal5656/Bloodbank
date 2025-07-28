@@ -203,3 +203,69 @@ class DatabaseUtils {
     }
   }
 }
+
+// Navigation utility class
+class NavigationUtils {
+  // Navigate to appropriate page based on user type
+  static void navigateToUserPage(BuildContext context, String userType) {
+    switch (userType) {
+      case 'Admin':
+        Navigator.of(context).pushReplacementNamed('/admin');
+        break;
+      case 'Donor':
+        Navigator.of(context).pushReplacementNamed('/donor');
+        break;
+      case 'Receiver':
+        Navigator.of(context).pushReplacementNamed('/receiver');
+        break;
+      default:
+        Navigator.of(context).pushReplacementNamed('/home');
+        break;
+    }
+  }
+
+  // Navigate to home page
+  static void navigateToHome(BuildContext context) {
+    Navigator.of(context).pushReplacementNamed('/home');
+  }
+
+  // Navigate to login page
+  static void navigateToLogin(BuildContext context) {
+    Navigator.of(context).pushReplacementNamed('/login');
+  }
+
+  // Navigate to profile page
+  static void navigateToProfile(BuildContext context) {
+    Navigator.of(context).pushNamed('/profile');
+  }
+
+  // Navigate to settings page
+  static void navigateToSettings(BuildContext context) {
+    Navigator.of(context).pushNamed('/settings');
+  }
+
+  // Navigate to contact page
+  static void navigateToContact(BuildContext context) {
+    Navigator.of(context).pushNamed('/contact');
+  }
+
+  // Navigate to blood inventory page
+  static void navigateToBloodInventory(BuildContext context) {
+    Navigator.of(context).pushNamed('/blood_inventory');
+  }
+
+  // Navigate to notification management page
+  static void navigateToNotificationManagement(BuildContext context) {
+    Navigator.of(context).pushNamed('/notification_management');
+  }
+
+  // Logout and navigate to home
+  static Future<void> logout(BuildContext context) async {
+    await SessionManager.clearSession();
+    UserSession.userType = '';
+    UserSession.email = '';
+    UserSession.userName = '';
+    UserSession.userId = 0;
+    Navigator.of(context).pushReplacementNamed('/home');
+  }
+}

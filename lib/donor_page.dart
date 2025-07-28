@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'notification_helper.dart';
-import 'main.dart' show UserSession;
+import 'main.dart' show UserSession, NavigationUtils;
 import 'utils/secure_code_generator.dart';
 
 class DonorPage extends StatefulWidget {
@@ -214,11 +214,27 @@ class _DonorPageState extends State<DonorPage> {
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () => NavigationUtils.navigateToHome(context),
+            tooltip: 'Home',
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () => NavigationUtils.navigateToProfile(context),
+            tooltip: 'Profile',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => NavigationUtils.navigateToSettings(context),
+            tooltip: 'Settings',
+          ),
           Stack(
             children: [
               IconButton(
                 onPressed: _showNotificationsDialog,
                 icon: const Icon(Icons.notifications),
+                tooltip: 'Notifications',
               ),
               if (_unreadNotificationsCount > 0)
                 Positioned(
@@ -242,6 +258,13 @@ class _DonorPageState extends State<DonorPage> {
                   ),
                 ),
             ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await NavigationUtils.logout(context);
+            },
+            tooltip: 'Logout',
           ),
         ],
       ),

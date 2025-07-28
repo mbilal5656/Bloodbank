@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'notification_helper.dart';
 import 'session_manager.dart';
-import 'main.dart' show UserSession;
+import 'main.dart' show UserSession, NavigationUtils;
 import 'utils/secure_code_generator.dart';
 
 class ReceiverPage extends StatefulWidget {
@@ -267,6 +267,21 @@ class _ReceiverPageState extends State<ReceiverPage> {
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () => NavigationUtils.navigateToHome(context),
+            tooltip: 'Home',
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () => NavigationUtils.navigateToProfile(context),
+            tooltip: 'Profile',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => NavigationUtils.navigateToSettings(context),
+            tooltip: 'Settings',
+          ),
           Stack(
             children: [
               IconButton(
@@ -300,11 +315,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              final navigator = Navigator.of(context);
-              await SessionManager.clearSession();
-              if (mounted) {
-                navigator.pushReplacementNamed('/login');
-              }
+              await NavigationUtils.logout(context);
             },
             tooltip: 'Logout',
           ),
