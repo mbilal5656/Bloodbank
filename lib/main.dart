@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'db_helper.dart';
+import 'services/data_service.dart';
 import 'notification_helper.dart';
 import 'session_manager.dart';
 import 'splash_screen.dart';
@@ -30,8 +31,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // Initialize database with default admin user
-    await DatabaseHelper.initializeDatabase();
+    // Initialize SQLite database with default admin user
+    await DataService.initializeDatabase();
 
     // Initialize notifications
     await NotificationHelper.initializeNotifications();
@@ -44,8 +45,11 @@ void main() async {
       UserSession.userType = sessionData['userType'] ?? '';
       UserSession.userName = sessionData['userName'] ?? '';
     }
+
+    print('Blood Bank App initialized successfully');
   } catch (e) {
     print('Error initializing app: $e');
+    // Continue with app launch even if there are initialization errors
   }
 
   runApp(const BloodBankApp());
@@ -85,34 +89,120 @@ class BloodBankApp extends StatelessWidget {
   }
 }
 
-// Simulated Blood Inventory
+// Enhanced Blood Inventory with database integration
 class BloodInventory {
-  static const Map<String, int> bloodStock = {
-    'A+': 10,
-    'A-': 5,
-    'B+': 8,
-    'B-': 3,
-    'AB+': 4,
-    'AB-': 2,
-    'O+': 12,
-    'O-': 6,
-  };
+  static final DataService _dataService = DataService();
 
-  static bool checkBloodAvailability(String bloodType) {
-    return bloodStock.containsKey(bloodType) && bloodStock[bloodType]! > 0;
+  static Future<Map<String, int>> getBloodStock() async {
+    try {
+      return await _dataService.getBloodInventorySummary();
+    } catch (e) {
+      print('Error getting blood stock: $e');
+      return {};
+    }
+  }
+
+  static Future<bool> checkBloodAvailability(String bloodType) async {
+    try {
+      final inventory = await _dataService.getBloodInventoryByGroup(bloodType);
+      return inventory != null && inventory.isAvailable;
+    } catch (e) {
+      print('Error checking blood availability: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> updateBloodStock(String bloodType, int quantity) async {
+    try {
+      final inventory = await _dataService.getBloodInventoryByGroup(bloodType);
+      if (inventory != null) {
+        return await _dataService.updateBloodInventory(inventory.id!, {
+          'quantity': quantity,
+        });
+      }
+      return false;
+    } catch (e) {
+      print('Error updating blood stock: $e');
+      return false;
+    }
   }
 }
 
-// Donor Eligibility Checker
+// Enhanced Donor Eligibility Checker with database integration
 class DonorEligibility {
-  static bool checkEligibility(
+  static final DataService _dataService = DataService();
+
+  static Future<bool> checkEligibility(
     int age,
     String bloodType, {
     bool hasRecentDonation = false,
-  }) {
-    return age >= 18 &&
-        age <= 65 &&
-        !hasRecentDonation &&
-        BloodInventory.bloodStock.containsKey(bloodType);
+  }) async {
+    try {
+      // Check age requirements
+      if (age < 18 || age > 65) return false;
+
+      // Check recent donation
+      if (hasRecentDonation) return false;
+
+      // Check blood type availability
+      final isAvailable = await BloodInventory.checkBloodAvailability(
+        bloodType,
+      );
+      return isAvailable;
+    } catch (e) {
+      print('Error checking donor eligibility: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> checkDonorHistory(int donorId) async {
+    try {
+      final donations = await _dataService.getDonationsByDonor(donorId);
+      if (donations.isEmpty) return true;
+
+      // Check if last donation was within 3 months
+      final lastDonation = donations.first;
+      final lastDonationDate = DateTime.parse(lastDonation['donationDate']);
+      final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
+
+      return lastDonationDate.isBefore(threeMonthsAgo);
+    } catch (e) {
+      print('Error checking donor history: $e');
+      return false;
+    }
+  }
+}
+
+// Database utility functions
+class DatabaseUtils {
+  static final DataService _dataService = DataService();
+
+  // Get database statistics
+  static Future<Map<String, dynamic>> getDatabaseStats() async {
+    try {
+      return await _dataService.getDatabaseStats();
+    } catch (e) {
+      print('Error getting database stats: $e');
+      return {};
+    }
+  }
+
+  // Validate user data
+  static bool validateUserData(Map<String, dynamic> userData) {
+    return DataService.validateUserData(userData);
+  }
+
+  // Validate blood inventory data
+  static bool validateBloodInventoryData(Map<String, dynamic> inventoryData) {
+    return DataService.validateBloodInventoryData(inventoryData);
+  }
+
+  // Close database connection
+  static Future<void> closeDatabase() async {
+    try {
+      await _dataService.close();
+    } catch (e) {
+      print('Error closing database: $e');
+    }
   }
 }
