@@ -20,12 +20,26 @@ class _SignupPageState extends State<SignupPage> {
   final _addressController = TextEditingController();
   final _emergencyContactController = TextEditingController();
   final _medicalHistoryController = TextEditingController();
+  final _occupationController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _heightController = TextEditingController();
+  final _lastDonationController = TextEditingController();
+  final _allergiesController = TextEditingController();
+  final _medicationsController = TextEditingController();
+  final _emergencyNameController = TextEditingController();
+  final _emergencyRelationController = TextEditingController();
+  
   String _userType = 'Donor';
   String _selectedBloodGroup = 'A+';
   String _gender = 'Male';
+  String _maritalStatus = 'Single';
+  String _occupation = 'Student';
+  DateTime? _dateOfBirth;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _hasMedicalConditions = false;
+  bool _isRegularDonor = false;
 
   @override
   void dispose() {
@@ -39,6 +53,14 @@ class _SignupPageState extends State<SignupPage> {
     _addressController.dispose();
     _emergencyContactController.dispose();
     _medicalHistoryController.dispose();
+    _occupationController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
+    _lastDonationController.dispose();
+    _allergiesController.dispose();
+    _medicationsController.dispose();
+    _emergencyNameController.dispose();
+    _emergencyRelationController.dispose();
     super.dispose();
   }
 
@@ -55,19 +77,59 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 
+  Future<void> _selectDateOfBirth() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().subtract(const Duration(days: 6570)), // 18 years ago
+      firstDate: DateTime.now().subtract(const Duration(days: 36500)), // 100 years ago
+      lastDate: DateTime.now().subtract(const Duration(days: 6570)), // 18 years ago
+    );
+    if (picked != null && picked != _dateOfBirth) {
+      setState(() {
+        _dateOfBirth = picked;
+        // Calculate age from date of birth
+        final age = DateTime.now().year - picked.year;
+        _ageController.text = age.toString();
+      });
+    }
+  }
+
+  Future<void> _selectLastDonationDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 3650)), // 10 years ago
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _lastDonationController.text = "${picked.day}/${picked.month}/${picked.year}";
+      });
+    }
+  }
+
   Future<void> _signup() async {
     debugPrint('Signup button pressed');
     debugPrint('Name: ${_nameController.text}');
     debugPrint('Email: ${_emailController.text}');
     debugPrint('Password: ${_passwordController.text}');
     debugPrint('User Type: $_userType');
-    debugPrint('Blood Group: ${_bloodGroupController.text}');
+    debugPrint('Blood Group: $_selectedBloodGroup');
     debugPrint('Age: ${_ageController.text}');
     debugPrint('Contact: ${_contactController.text}');
+    debugPrint('Gender: $_gender');
+    debugPrint('Marital Status: $_maritalStatus');
+    debugPrint('Occupation: $_occupation');
+    debugPrint('Date of Birth: $_dateOfBirth');
+    debugPrint('Weight: ${_weightController.text}');
+    debugPrint('Height: ${_heightController.text}');
+    debugPrint('Last Donation: ${_lastDonationController.text}');
+    debugPrint('Medical Conditions: $_hasMedicalConditions');
+    debugPrint('Regular Donor: $_isRegularDonor');
 
     if (!mounted) return;
 
-    // Simple validation first
+    // Enhanced validation
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _passwordController.text.isEmpty ||
@@ -112,6 +174,22 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
+    // Weight validation (if provided)
+    if (_weightController.text.isNotEmpty) {
+      final weight = double.tryParse(_weightController.text);
+      if (weight == null || weight < 30 || weight > 200) {
+        debugPrint('Validation failed: Invalid weight');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Weight must be between 30 and 200 kg'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        return;
+      }
+    }
+
     debugPrint('Validation passed, starting signup process');
 
     setState(() {
@@ -142,7 +220,7 @@ class _SignupPageState extends State<SignupPage> {
 
       debugPrint('Email is available, creating new user...');
 
-      // Create new user
+      // Create new user with enhanced data
       debugPrint('Creating UserModel instance...');
       final now = DateTime.now().toIso8601String();
       final newUser = UserModel(
@@ -293,6 +371,34 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 16),
                 
+                // Date of Birth
+                InkWell(
+                  onTap: _selectDateOfBirth,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardColor,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today, color: Colors.grey),
+                        const SizedBox(width: 12),
+                        Text(
+                          _dateOfBirth != null
+                              ? '${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}'
+                              : 'Date of Birth *',
+                          style: TextStyle(
+                            color: _dateOfBirth != null ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
                 // Gender Selection
                 DropdownButtonFormField<String>(
                   value: _gender,
@@ -316,6 +422,29 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 16),
                 
+                // Marital Status
+                DropdownButtonFormField<String>(
+                  value: _maritalStatus,
+                  decoration: InputDecoration(
+                    labelText: 'Marital Status',
+                    prefixIcon: const Icon(Icons.favorite),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  items: ['Single', 'Married', 'Divorced', 'Widowed']
+                      .map((status) => DropdownMenuItem(
+                            value: status,
+                            child: Text(status),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _maritalStatus = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                
                 TextFormField(
                   controller: _ageController,
                   decoration: InputDecoration(
@@ -325,6 +454,40 @@ class _SignupPageState extends State<SignupPage> {
                     fillColor: AppTheme.cardColor,
                   ),
                   keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                
+                // Physical Information Section
+                _buildSectionTitle('Physical Information'),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _weightController,
+                        decoration: InputDecoration(
+                          labelText: 'Weight (kg)',
+                          prefixIcon: const Icon(Icons.monitor_weight),
+                          filled: true,
+                          fillColor: AppTheme.cardColor,
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _heightController,
+                        decoration: InputDecoration(
+                          labelText: 'Height (cm)',
+                          prefixIcon: const Icon(Icons.height),
+                          filled: true,
+                          fillColor: AppTheme.cardColor,
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 
@@ -353,6 +516,34 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 16),
                 
+                // Last Donation Date (for donors)
+                InkWell(
+                  onTap: _selectLastDonationDate,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardColor,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.history, color: Colors.grey),
+                        const SizedBox(width: 12),
+                        Text(
+                          _lastDonationController.text.isNotEmpty
+                              ? _lastDonationController.text
+                              : 'Last Donation Date (if any)',
+                          style: TextStyle(
+                            color: _lastDonationController.text.isNotEmpty ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
                 // Account Information Section
                 _buildSectionTitle('Account Information'),
                 
@@ -373,6 +564,29 @@ class _SignupPageState extends State<SignupPage> {
                   onChanged: (value) {
                     setState(() {
                       _userType = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Occupation
+                DropdownButtonFormField<String>(
+                  value: _occupation,
+                  decoration: InputDecoration(
+                    labelText: 'Occupation',
+                    prefixIcon: const Icon(Icons.work),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  items: ['Student', 'Employee', 'Self-employed', 'Retired', 'Other']
+                      .map((occupation) => DropdownMenuItem(
+                            value: occupation,
+                            child: Text(occupation),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _occupation = value!;
                     });
                   },
                 ),
@@ -449,20 +663,104 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 16),
                 
+                // Emergency Contact Information
+                _buildSectionTitle('Emergency Contact'),
+                
                 TextFormField(
-                  controller: _emergencyContactController,
+                  controller: _emergencyNameController,
                   decoration: InputDecoration(
-                    labelText: 'Emergency Contact',
-                    prefixIcon: const Icon(Icons.emergency),
+                    labelText: 'Emergency Contact Name',
+                    prefixIcon: const Icon(Icons.person_add),
                     filled: true,
                     fillColor: AppTheme.cardColor,
                   ),
-                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _emergencyContactController,
+                        decoration: InputDecoration(
+                          labelText: 'Emergency Contact Number',
+                          prefixIcon: const Icon(Icons.emergency),
+                          filled: true,
+                          fillColor: AppTheme.cardColor,
+                        ),
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _emergencyRelationController,
+                        decoration: InputDecoration(
+                          labelText: 'Relationship',
+                          prefixIcon: const Icon(Icons.family_restroom),
+                          filled: true,
+                          fillColor: AppTheme.cardColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 
                 // Medical Information Section
                 _buildSectionTitle('Medical Information'),
+                
+                // Medical Conditions Checkbox
+                CheckboxListTile(
+                  title: const Text('I have medical conditions'),
+                  value: _hasMedicalConditions,
+                  onChanged: (value) {
+                    setState(() {
+                      _hasMedicalConditions = value ?? false;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  activeColor: AppTheme.primaryColor,
+                ),
+                
+                // Regular Donor Checkbox
+                CheckboxListTile(
+                  title: const Text('I am a regular blood donor'),
+                  value: _isRegularDonor,
+                  onChanged: (value) {
+                    setState(() {
+                      _isRegularDonor = value ?? false;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  activeColor: AppTheme.primaryColor,
+                ),
+                
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _allergiesController,
+                  decoration: InputDecoration(
+                    labelText: 'Allergies (if any)',
+                    prefixIcon: const Icon(Icons.warning),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _medicationsController,
+                  decoration: InputDecoration(
+                    labelText: 'Current Medications (if any)',
+                    prefixIcon: const Icon(Icons.medication),
+                    filled: true,
+                    fillColor: AppTheme.cardColor,
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
                 
                 TextFormField(
                   controller: _medicalHistoryController,
