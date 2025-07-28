@@ -32,7 +32,7 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, _databaseName);
-    
+
     debugPrint('Database path: $path');
     debugPrint('Database name: $_databaseName');
     debugPrint('Database version: $_databaseVersion');
@@ -48,7 +48,7 @@ class DatabaseHelper {
   // Create database tables
   Future<void> _onCreate(Database db, int version) async {
     debugPrint('Creating database tables...');
-    
+
     // Users table
     await db.execute('''
       CREATE TABLE $_usersTable (
@@ -131,11 +131,11 @@ class DatabaseHelper {
     // Insert default admin user
     debugPrint('Inserting default admin user...');
     await _insertDefaultAdmin(db);
-    
+
     // Insert default blood inventory
     debugPrint('Inserting default blood inventory...');
     await _insertDefaultBloodInventory(db);
-    
+
     debugPrint('Database creation completed successfully');
   }
 
@@ -199,15 +199,17 @@ class DatabaseHelper {
       final dbHelper = DatabaseHelper();
       final db = await dbHelper.database;
       debugPrint('Database connection established successfully');
-      
+
       // Test database by checking if admin user exists
       final adminUser = await dbHelper.getUserByEmail('admin@bloodbank.com');
       if (adminUser != null) {
         debugPrint('Admin user found: ${adminUser['name']}');
       } else {
-        debugPrint('Admin user not found - database may not be properly initialized');
+        debugPrint(
+          'Admin user not found - database may not be properly initialized',
+        );
       }
-      
+
       debugPrint('Database initialized successfully');
     } catch (e) {
       debugPrint('Database initialization error: $e');
@@ -287,11 +289,11 @@ class DatabaseHelper {
     try {
       debugPrint('Attempting to create user: ${userData['email']}');
       final db = await database;
-      
+
       // Hash password
       final hashedPassword = _hashPassword(userData['password']);
       debugPrint('Password hashed successfully');
-      
+
       // Prepare user data
       final user = {
         'name': userData['name'],
@@ -319,12 +321,12 @@ class DatabaseHelper {
   Future<bool> updateUser(int userId, Map<String, dynamic> userData) async {
     try {
       final db = await database;
-      
+
       // Handle password update
       if (userData.containsKey('password')) {
         userData['password'] = _hashPassword(userData['password']);
       }
-      
+
       userData['updatedAt'] = DateTime.now().toIso8601String();
 
       final count = await db.update(
@@ -385,7 +387,11 @@ class DatabaseHelper {
   }
 
   // Change password
-  Future<bool> changePassword(int userId, String oldPassword, String newPassword) async {
+  Future<bool> changePassword(
+    int userId,
+    String oldPassword,
+    String newPassword,
+  ) async {
     try {
       final user = await getUserById(userId);
       if (user == null) return false;
@@ -420,7 +426,9 @@ class DatabaseHelper {
   }
 
   // Get blood inventory by group
-  Future<Map<String, dynamic>?> getBloodInventoryByGroup(String bloodGroup) async {
+  Future<Map<String, dynamic>?> getBloodInventoryByGroup(
+    String bloodGroup,
+  ) async {
     try {
       final db = await database;
       final result = await db.query(
@@ -440,7 +448,7 @@ class DatabaseHelper {
     try {
       final db = await database;
       data['lastUpdated'] = DateTime.now().toIso8601String();
-      
+
       final count = await db.update(
         _bloodInventoryTable,
         data,
@@ -458,7 +466,7 @@ class DatabaseHelper {
   Future<bool> addBloodInventory(Map<String, dynamic> data) async {
     try {
       final db = await database;
-      
+
       final inventory = {
         'bloodGroup': data['bloodGroup'],
         'quantity': data['quantity'],
@@ -513,13 +521,13 @@ class DatabaseHelper {
     try {
       final inventory = await getAllBloodInventory();
       final summary = <String, int>{};
-      
+
       for (final item in inventory) {
         final bloodGroup = item['bloodGroup'] as String;
         final quantity = item['quantity'] as int;
         summary[bloodGroup] = quantity;
       }
-      
+
       return summary;
     } catch (e) {
       debugPrint('Error getting blood inventory summary: $e');
@@ -533,7 +541,7 @@ class DatabaseHelper {
   Future<bool> addDonation(Map<String, dynamic> donationData) async {
     try {
       final db = await database;
-      
+
       final donation = {
         'donorId': donationData['donorId'],
         'bloodGroup': donationData['bloodGroup'],
@@ -574,7 +582,7 @@ class DatabaseHelper {
   Future<bool> addBloodRequest(Map<String, dynamic> requestData) async {
     try {
       final db = await database;
-      
+
       final request = {
         'requesterId': requestData['requesterId'],
         'bloodGroup': requestData['bloodGroup'],
@@ -596,7 +604,9 @@ class DatabaseHelper {
   }
 
   // Get requests by requester
-  Future<List<Map<String, dynamic>>> getRequestsByRequester(int requesterId) async {
+  Future<List<Map<String, dynamic>>> getRequestsByRequester(
+    int requesterId,
+  ) async {
     try {
       final db = await database;
       final result = await db.query(
@@ -618,7 +628,7 @@ class DatabaseHelper {
   Future<bool> addNotification(Map<String, dynamic> notificationData) async {
     try {
       final db = await database;
-      
+
       final notification = {
         'userId': notificationData['userId'],
         'title': notificationData['title'],

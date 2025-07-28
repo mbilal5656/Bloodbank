@@ -31,6 +31,15 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Future<void> _signup() async {
+    debugPrint('Signup button pressed');
+    debugPrint('Name: ${_nameController.text}');
+    debugPrint('Email: ${_emailController.text}');
+    debugPrint('Password: ${_passwordController.text}');
+    debugPrint('User Type: $_userType');
+    debugPrint('Blood Group: ${_bloodGroupController.text}');
+    debugPrint('Age: ${_ageController.text}');
+    debugPrint('Contact: ${_contactController.text}');
+
     if (!mounted) return;
 
     // Simple validation first
@@ -40,6 +49,7 @@ class _SignupPageState extends State<SignupPage> {
         _bloodGroupController.text.isEmpty ||
         _ageController.text.isEmpty ||
         (_userType != 'Admin' && _contactController.text.isEmpty)) {
+      debugPrint('Validation failed: Missing required fields');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -50,12 +60,16 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
+    debugPrint('Validation passed, starting signup process');
+
     setState(() {
       _isLoading = true;
     });
 
     try {
+      debugPrint('Creating DataService instance');
       final dataService = DataService();
+      debugPrint('Checking if email already exists...');
       // Check if email already exists
       final existingUser = await dataService.getUserByEmail(
         _emailController.text.trim(),
@@ -64,6 +78,7 @@ class _SignupPageState extends State<SignupPage> {
       if (!mounted) return;
 
       if (existingUser != null) {
+        debugPrint('Email already registered: ${_emailController.text.trim()}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Email already registered'),
@@ -73,7 +88,10 @@ class _SignupPageState extends State<SignupPage> {
         return;
       }
 
+      debugPrint('Email is available, creating new user...');
+
       // Create new user
+      debugPrint('Creating UserModel instance...');
       final now = DateTime.now().toIso8601String();
       final newUser = UserModel(
         name: _nameController.text.trim(),
@@ -89,11 +107,17 @@ class _SignupPageState extends State<SignupPage> {
         updatedAt: now,
       );
 
+      debugPrint('UserModel created: ${newUser.name} (${newUser.email})');
+      debugPrint('Calling dataService.createUser...');
+
       final success = await dataService.createUser(newUser);
+
+      debugPrint('User creation result: $success');
 
       if (!mounted) return;
 
       if (success) {
+        debugPrint('User created successfully, showing success message');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -104,6 +128,7 @@ class _SignupPageState extends State<SignupPage> {
         );
         Navigator.of(context).pushReplacementNamed('/login');
       } else {
+        debugPrint('User creation failed, showing error message');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to create account. Please try again.'),
@@ -112,6 +137,7 @@ class _SignupPageState extends State<SignupPage> {
         );
       }
     } catch (e) {
+      debugPrint('Signup error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -120,6 +146,7 @@ class _SignupPageState extends State<SignupPage> {
         ),
       );
     } finally {
+      debugPrint('Signup process completed, setting loading to false');
       if (mounted) {
         setState(() {
           _isLoading = false;

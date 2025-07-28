@@ -73,7 +73,7 @@ class _DonorPageState extends State<DonorPage> {
                     final notification = _notifications[index];
                     final isRead = notification['isRead'] ?? false;
                     final type = notification['type'] ?? 'info';
-                    
+
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: _getNotificationColor(type),
@@ -85,7 +85,9 @@ class _DonorPageState extends State<DonorPage> {
                       title: Text(
                         notification['title'] ?? '',
                         style: TextStyle(
-                          fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                          fontWeight: isRead
+                              ? FontWeight.normal
+                              : FontWeight.bold,
                         ),
                       ),
                       subtitle: Text(notification['message'] ?? ''),
@@ -234,10 +236,7 @@ class _DonorPageState extends State<DonorPage> {
                     ),
                     child: Text(
                       '$_unreadNotificationsCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 8),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -270,10 +269,11 @@ class _DonorPageState extends State<DonorPage> {
                       children: [
                         Text(
                           'Blood Donation Eligibility',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: const Color(0xFF1A237E),
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: const Color(0xFF1A237E),
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         const SizedBox(height: 16),
                         Form(
@@ -323,14 +323,38 @@ class _DonorPageState extends State<DonorPage> {
                                   prefixIcon: Icon(Icons.bloodtype),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: 'A+', child: Text('A+')),
-                                  DropdownMenuItem(value: 'A-', child: Text('A-')),
-                                  DropdownMenuItem(value: 'B+', child: Text('B+')),
-                                  DropdownMenuItem(value: 'B-', child: Text('B-')),
-                                  DropdownMenuItem(value: 'AB+', child: Text('AB+')),
-                                  DropdownMenuItem(value: 'AB-', child: Text('AB-')),
-                                  DropdownMenuItem(value: 'O+', child: Text('O+')),
-                                  DropdownMenuItem(value: 'O-', child: Text('O-')),
+                                  DropdownMenuItem(
+                                    value: 'A+',
+                                    child: Text('A+'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'A-',
+                                    child: Text('A-'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'B+',
+                                    child: Text('B+'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'B-',
+                                    child: Text('B-'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'AB+',
+                                    child: Text('AB+'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'AB-',
+                                    child: Text('AB-'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'O+',
+                                    child: Text('O+'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'O-',
+                                    child: Text('O-'),
+                                  ),
                                 ],
                                 onChanged: (value) {
                                   setState(() {
@@ -376,9 +400,13 @@ class _DonorPageState extends State<DonorPage> {
                                     child: ElevatedButton(
                                       onPressed: _checkEligibility,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF1A237E),
+                                        backgroundColor: const Color(
+                                          0xFF1A237E,
+                                        ),
                                         foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
                                       ),
                                       child: const Text('Check Eligibility'),
                                     ),
@@ -386,11 +414,15 @@ class _DonorPageState extends State<DonorPage> {
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: ElevatedButton(
-                                      onPressed: _isEligible ? _submitDonation : null,
+                                      onPressed: _isEligible
+                                          ? _submitDonation
+                                          : null,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.green,
                                         foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
                                       ),
                                       child: const Text('Submit Donation'),
                                     ),
@@ -414,10 +446,11 @@ class _DonorPageState extends State<DonorPage> {
                         children: [
                           Text(
                             'Donation Code',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                           const SizedBox(height: 8),
                           Container(
@@ -461,10 +494,11 @@ class _DonorPageState extends State<DonorPage> {
                       children: [
                         Text(
                           'Donation Guidelines',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: const Color(0xFF1A237E),
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: const Color(0xFF1A237E),
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         const SizedBox(height: 16),
                         _buildGuideline(
