@@ -8,29 +8,30 @@ class SecureCodeGenerator {
 
   /// Generates a secure code with minimum 8 characters containing:
   /// - At least 2 uppercase letters
-  /// - At least 2 lowercase letters  
+  /// - At least 2 lowercase letters
   /// - At least 2 digits
   /// - At least 2 special characters
   static String generateSecureCode({int length = 12}) {
     if (length < 8) length = 8;
-    
+
     final random = Random.secure();
     final buffer = StringBuffer();
-    
+
     // Ensure minimum requirements
     buffer.write(_getRandomChars(_uppercaseLetters, 2, random));
     buffer.write(_getRandomChars(_lowercaseLetters, 2, random));
     buffer.write(_getRandomChars(_digits, 2, random));
     buffer.write(_getRandomChars(_specialChars, 2, random));
-    
+
     // Fill remaining length with random characters
-    final allChars = _uppercaseLetters + _lowercaseLetters + _digits + _specialChars;
+    const allChars =
+        _uppercaseLetters + _lowercaseLetters + _digits + _specialChars;
     final remainingLength = length - 8;
-    
+
     for (int i = 0; i < remainingLength; i++) {
       buffer.write(allChars[random.nextInt(allChars.length)]);
     }
-    
+
     // Shuffle the final string to make it more random
     final chars = buffer.toString().split('');
     chars.shuffle(random);
@@ -55,12 +56,13 @@ class SecureCodeGenerator {
   /// Validates if a code meets security requirements
   static bool isValidSecureCode(String code) {
     if (code.length < 8) return false;
-    
+
     final hasUppercase = RegExp(r'[A-Z]').hasMatch(code);
     final hasLowercase = RegExp(r'[a-z]').hasMatch(code);
     final hasDigits = RegExp(r'[0-9]').hasMatch(code);
-    final hasSpecial = RegExp(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]').hasMatch(code);
-    
+    final hasSpecial =
+        RegExp(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]').hasMatch(code);
+
     return hasUppercase && hasLowercase && hasDigits && hasSpecial;
   }
 
@@ -87,4 +89,4 @@ class SecureCodeGenerator {
     final randomPart = random.nextInt(10000).toString().padLeft(4, '0');
     return '${timestamp}_$randomPart';
   }
-} 
+}

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'notification_helper.dart';
-import 'session_manager.dart';
 import 'main.dart' show UserSession, NavigationUtils;
 import 'utils/secure_code_generator.dart';
 
@@ -55,17 +54,17 @@ class _ReceiverPageState extends State<ReceiverPage> {
   Future<void> _loadNotifications() async {
     try {
       final notifications = await NotificationHelper.getNotificationsForUser(
-        UserSession.userId,
+        UserSession.userId ?? 0,
       );
       final unreadCount = await NotificationHelper.getUnreadNotificationsCount(
-        UserSession.userId,
+        UserSession.userId ?? 0,
       );
       setState(() {
         _notifications = notifications;
         _unreadNotificationsCount = unreadCount;
       });
     } catch (e) {
-      // Handle error silently
+      debugPrint('Error loading notifications: $e');
     }
   }
 
@@ -97,9 +96,8 @@ class _ReceiverPageState extends State<ReceiverPage> {
                       title: Text(
                         notification['title'] ?? '',
                         style: TextStyle(
-                          fontWeight: isRead
-                              ? FontWeight.normal
-                              : FontWeight.bold,
+                          fontWeight:
+                              isRead ? FontWeight.normal : FontWeight.bold,
                         ),
                       ),
                       subtitle: Text(notification['message'] ?? ''),
@@ -176,7 +174,6 @@ class _ReceiverPageState extends State<ReceiverPage> {
       }
     });
 
-    // Show urgency-specific message
     String message = _isAvailable
         ? 'Blood is available! $availableUnits units in stock.'
         : 'Blood is currently not available. We will notify you when it becomes available.';
@@ -214,16 +211,11 @@ class _ReceiverPageState extends State<ReceiverPage> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     // Simulate API call
     Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        _isLoading = false;
-      });
-
+      setState(() => _isLoading = false);
       _showRequestSubmittedDialog();
     });
   }
@@ -264,8 +256,6 @@ class _ReceiverPageState extends State<ReceiverPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Receiver Dashboard'),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
@@ -282,41 +272,10 @@ class _ReceiverPageState extends State<ReceiverPage> {
             onPressed: () => NavigationUtils.navigateToSettings(context),
             tooltip: 'Settings',
           ),
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications),
-                onPressed: () => _showNotificationsDialog(),
-                tooltip: 'Notifications',
-              ),
-              if (_unreadNotificationsCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '$_unreadNotificationsCount',
-                      style: const TextStyle(color: Colors.white, fontSize: 10),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          _buildNotificationButton(),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await NavigationUtils.logout(context);
-            },
+            onPressed: () async => await NavigationUtils.logout(context),
             tooltip: 'Logout',
           ),
         ],
@@ -339,353 +298,359 @@ class _ReceiverPageState extends State<ReceiverPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Header
-                  Icon(Icons.bloodtype, size: 80, color: Colors.white),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Blood Request Form',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Request blood for medical needs',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                    textAlign: TextAlign.center,
-                  ),
+                  _buildHeader(),
                   const SizedBox(height: 32),
-
-                  // Form Fields
-                  TextFormField(
-                    controller: _patientNameController,
-                    decoration: InputDecoration(
-                      labelText: 'Patient Name',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.person,
-                        color: Colors.white70,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.2),
-                      labelStyle: const TextStyle(color: Colors.white70),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter patient name';
-                      }
-                      if (value.length < 2) {
-                        return 'Name must be at least 2 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<String>(
-                    value: _selectedBloodGroup,
-                    decoration: InputDecoration(
-                      labelText: 'Required Blood Group',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.bloodtype,
-                        color: Colors.white70,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.2),
-                      labelStyle: const TextStyle(color: Colors.white70),
-                    ),
-                    dropdownColor: const Color(0xFF1A237E),
-                    style: const TextStyle(color: Colors.white),
-                    items: const [
-                      DropdownMenuItem(value: 'A+', child: Text('A+')),
-                      DropdownMenuItem(value: 'A-', child: Text('A-')),
-                      DropdownMenuItem(value: 'B+', child: Text('B+')),
-                      DropdownMenuItem(value: 'B-', child: Text('B-')),
-                      DropdownMenuItem(value: 'AB+', child: Text('AB+')),
-                      DropdownMenuItem(value: 'AB-', child: Text('AB-')),
-                      DropdownMenuItem(value: 'O+', child: Text('O+')),
-                      DropdownMenuItem(value: 'O-', child: Text('O-')),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedBloodGroup = value!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _contactController,
-                    decoration: InputDecoration(
-                      labelText: 'Contact Number',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.phone,
-                        color: Colors.white70,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.2),
-                      labelStyle: const TextStyle(color: Colors.white70),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                    keyboardType: TextInputType.phone,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter contact number';
-                      }
-                      final cleanNumber = value.replaceAll(
-                        RegExp(r'[\s\-\(\)]'),
-                        '',
-                      );
-                      if (!RegExp(r'^\+?[0-9]{10,15}$').hasMatch(cleanNumber)) {
-                        return 'Please enter a valid contact number';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _hospitalController,
-                    decoration: InputDecoration(
-                      labelText: 'Hospital/Clinic Name',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.local_hospital,
-                        color: Colors.white70,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.2),
-                      labelStyle: const TextStyle(color: Colors.white70),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter hospital name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<String>(
-                    value: _selectedUrgency,
-                    decoration: InputDecoration(
-                      labelText: 'Urgency Level',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.priority_high,
-                        color: Colors.white70,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.2),
-                      labelStyle: const TextStyle(color: Colors.white70),
-                    ),
-                    dropdownColor: const Color(0xFF1A237E),
-                    style: const TextStyle(color: Colors.white),
-                    items: const [
-                      DropdownMenuItem(value: 'Normal', child: Text('Normal')),
-                      DropdownMenuItem(value: 'Urgent', child: Text('Urgent')),
-                      DropdownMenuItem(
-                        value: 'Emergency',
-                        child: Text('Emergency'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedUrgency = value!;
-                      });
-                    },
-                  ),
+                  _buildRequestForm(),
                   const SizedBox(height: 24),
-
-                  // Availability Status
-                  if (_requestCode != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.green.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
-                            size: 32,
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Blood Available',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Request Code: $_requestCode',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _verificationCodeController,
-                      decoration: InputDecoration(
-                        labelText: 'Enter Verification Code',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.security,
-                          color: Colors.white70,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white.withValues(alpha: 0.2),
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        hintText: 'Enter 8-digit verification code',
-                        hintStyle: const TextStyle(color: Colors.white54),
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                      keyboardType: TextInputType.text,
-                      maxLength: 8,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter verification code';
-                        }
-                        if (value.length < 8) {
-                          return 'Verification code must be 8 characters';
-                        }
-                        if (!SecureCodeGenerator.isValidSecureCode(value)) {
-                          return 'Invalid verification code format';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Buttons
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _checkAvailability,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CAF50),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Check Availability',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  if (_isAvailable) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _submitRequest,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2196F3),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Text(
-                                'Submit Request',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 24),
-
-                  // Blood Inventory Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Current Blood Inventory:',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ..._bloodInventory.entries.map(
-                          (entry) =>
-                              _buildInventoryItem(entry.key, entry.value),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildBloodInventoryCard(),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationButton() {
+    return Stack(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications),
+          onPressed: () => _showNotificationsDialog(),
+          tooltip: 'Notifications',
+        ),
+        if (_unreadNotificationsCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                '$_unreadNotificationsCount',
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        const Icon(Icons.bloodtype, size: 80, color: Colors.white),
+        const SizedBox(height: 20),
+        Text(
+          'Blood Request Form',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Request blood for medical needs',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRequestForm() {
+    return Column(
+      children: [
+        _buildFormField(
+          controller: _patientNameController,
+          label: 'Patient Name',
+          icon: Icons.person,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter patient name';
+            }
+            if (value.length < 2) {
+              return 'Name must be at least 2 characters';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        _buildBloodGroupDropdown(),
+        const SizedBox(height: 16),
+        _buildFormField(
+          controller: _contactController,
+          label: 'Contact Number',
+          icon: Icons.phone,
+          keyboardType: TextInputType.phone,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter contact number';
+            }
+            final cleanNumber = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+            if (!RegExp(r'^\+?[0-9]{10,15}$').hasMatch(cleanNumber)) {
+              return 'Please enter a valid contact number';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        _buildFormField(
+          controller: _hospitalController,
+          label: 'Hospital/Clinic Name',
+          icon: Icons.local_hospital,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter hospital name';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        _buildUrgencyDropdown(),
+        const SizedBox(height: 24),
+        if (_requestCode != null) ...[
+          _buildAvailabilityStatus(),
+          const SizedBox(height: 16),
+          _buildVerificationCodeField(),
+          const SizedBox(height: 16),
+        ],
+        _buildActionButtons(),
+      ],
+    );
+  }
+
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: Icon(icon, color: Colors.white70),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.2),
+        labelStyle: const TextStyle(color: Colors.white70),
+      ),
+      style: const TextStyle(color: Colors.white),
+      keyboardType: keyboardType,
+      validator: validator,
+    );
+  }
+
+  Widget _buildBloodGroupDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedBloodGroup,
+      decoration: InputDecoration(
+        labelText: 'Required Blood Group',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: const Icon(Icons.bloodtype, color: Colors.white70),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.2),
+        labelStyle: const TextStyle(color: Colors.white70),
+      ),
+      dropdownColor: const Color(0xFF1A237E),
+      style: const TextStyle(color: Colors.white),
+      items: const [
+        DropdownMenuItem(value: 'A+', child: Text('A+')),
+        DropdownMenuItem(value: 'A-', child: Text('A-')),
+        DropdownMenuItem(value: 'B+', child: Text('B+')),
+        DropdownMenuItem(value: 'B-', child: Text('B-')),
+        DropdownMenuItem(value: 'AB+', child: Text('AB+')),
+        DropdownMenuItem(value: 'AB-', child: Text('AB-')),
+        DropdownMenuItem(value: 'O+', child: Text('O+')),
+        DropdownMenuItem(value: 'O-', child: Text('O-')),
+      ],
+      onChanged: (value) {
+        setState(() => _selectedBloodGroup = value!);
+      },
+    );
+  }
+
+  Widget _buildUrgencyDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedUrgency,
+      decoration: InputDecoration(
+        labelText: 'Urgency Level',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: const Icon(Icons.priority_high, color: Colors.white70),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.2),
+        labelStyle: const TextStyle(color: Colors.white70),
+      ),
+      dropdownColor: const Color(0xFF1A237E),
+      style: const TextStyle(color: Colors.white),
+      items: const [
+        DropdownMenuItem(value: 'Normal', child: Text('Normal')),
+        DropdownMenuItem(value: 'Urgent', child: Text('Urgent')),
+        DropdownMenuItem(value: 'Emergency', child: Text('Emergency')),
+      ],
+      onChanged: (value) {
+        setState(() => _selectedUrgency = value!);
+      },
+    );
+  }
+
+  Widget _buildAvailabilityStatus() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.check_circle, color: Colors.green, size: 32),
+          const SizedBox(height: 8),
+          const Text(
+            'Blood Available',
+            style: TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Request Code: $_requestCode',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerificationCodeField() {
+    return TextFormField(
+      controller: _verificationCodeController,
+      decoration: InputDecoration(
+        labelText: 'Enter Verification Code',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: const Icon(Icons.security, color: Colors.white70),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.2),
+        labelStyle: const TextStyle(color: Colors.white70),
+        hintText: 'Enter 8-digit verification code',
+        hintStyle: const TextStyle(color: Colors.white54),
+      ),
+      style: const TextStyle(color: Colors.white),
+      keyboardType: TextInputType.text,
+      maxLength: 8,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter verification code';
+        }
+        if (value.length < 8) {
+          return 'Verification code must be 8 characters';
+        }
+        if (!SecureCodeGenerator.isValidSecureCode(value)) {
+          return 'Invalid verification code format';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: _checkAvailability,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4CAF50),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Check Availability',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_isAvailable) ...[
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _submitRequest,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2196F3),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Submit Request',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBloodInventoryCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Current Blood Inventory:',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ..._bloodInventory.entries.map(
+            (entry) => _buildInventoryItem(entry.key, entry.value),
+          ),
+        ],
       ),
     );
   }

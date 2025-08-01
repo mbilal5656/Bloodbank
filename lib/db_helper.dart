@@ -1,13 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'package:crypto/crypto.dart';
 
 class DatabaseHelper {
   static Database? _database;
   static const String _databaseName = 'bloodbank.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 4;
+  static bool _isInitialized = false;
 
   // Table names
   static const String _usersTable = 'users';
@@ -15,11 +17,26 @@ class DatabaseHelper {
   static const String _donationsTable = 'donations';
   static const String _requestsTable = 'blood_requests';
   static const String _notificationsTable = 'notifications';
+  static const String _userSessionsTable = 'user_sessions';
+  static const String _auditLogTable = 'audit_log';
 
   // Singleton pattern
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
+
+  // Initialize database factory for web/desktop platforms
+  static Future<void> initializeDatabaseFactory() async {
+    if (kIsWeb) {
+      debugPrint('Web platform detected - skipping SQLite initialization');
+      return;
+    }
+
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+  }
 
   // Get database instance
   Future<Database> get database async {
@@ -30,6 +47,11 @@ class DatabaseHelper {
 
   // Initialize database
   Future<Database> _initDatabase() async {
+    if (kIsWeb) {
+      throw UnsupportedError(
+          'SQLite is not supported on web platforms. Please use a web-compatible database.');
+    }
+
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, _databaseName);
 
@@ -60,6 +82,9 @@ class DatabaseHelper {
         bloodGroup TEXT,
         age INTEGER,
         contactNumber TEXT,
+        address TEXT,
+        isActive INTEGER DEFAULT 1,
+        lastLogin TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL
       )
@@ -72,10 +97,11 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         bloodGroup TEXT NOT NULL,
         quantity INTEGER NOT NULL,
+        reservedQuantity INTEGER DEFAULT 0,
         status TEXT NOT NULL,
         lastUpdated TEXT NOT NULL,
         createdBy INTEGER,
-        FOREIGN KEY (createdBy) REFERENCES $_usersTable (id)
+        notes TEXT
       )
     ''');
     debugPrint('Blood inventory table created successfully');
@@ -90,7 +116,7 @@ class DatabaseHelper {
         donationDate TEXT NOT NULL,
         status TEXT NOT NULL,
         notes TEXT,
-        FOREIGN KEY (donorId) REFERENCES $_usersTable (id)
+        createdBy INTEGER
       )
     ''');
     debugPrint('Donations table created successfully');
@@ -105,10 +131,8 @@ class DatabaseHelper {
         urgency TEXT NOT NULL,
         requestDate TEXT NOT NULL,
         status TEXT NOT NULL,
-        patientName TEXT,
-        hospital TEXT,
         notes TEXT,
-        FOREIGN KEY (requesterId) REFERENCES $_usersTable (id)
+        createdBy INTEGER
       )
     ''');
     debugPrint('Blood requests table created successfully');
@@ -117,71 +141,165 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE $_notificationsTable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        userId INTEGER,
+        userId INTEGER NOT NULL,
         title TEXT NOT NULL,
         message TEXT NOT NULL,
         type TEXT NOT NULL,
         isRead INTEGER DEFAULT 0,
-        createdAt TEXT NOT NULL,
-        FOREIGN KEY (userId) REFERENCES $_usersTable (id)
+        createdAt TEXT NOT NULL
       )
     ''');
     debugPrint('Notifications table created successfully');
 
+    // User sessions table
+    await db.execute('''
+      CREATE TABLE $_userSessionsTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER NOT NULL,
+        sessionToken TEXT NOT NULL,
+        expiresAt TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+    debugPrint('User sessions table created successfully');
+
+    // Audit log table
+    await db.execute('''
+      CREATE TABLE $_auditLogTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER,
+        action TEXT NOT NULL,
+        tableName TEXT,
+        recordId INTEGER,
+        oldValues TEXT,
+        newValues TEXT,
+        timestamp TEXT NOT NULL,
+        ipAddress TEXT,
+        userAgent TEXT
+      )
+    ''');
+    debugPrint('Audit log table created successfully');
+
     // Insert default admin user
-    debugPrint('Inserting default admin user...');
     await _insertDefaultAdmin(db);
-
-    // Insert default blood inventory
-    debugPrint('Inserting default blood inventory...');
-    await _insertDefaultBloodInventory(db);
-
-    debugPrint('Database creation completed successfully');
   }
 
-  // Upgrade database
+  // Update database schema
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < newVersion) {
-      // Add migration logic here if needed
-      debugPrint('Database upgraded from version $oldVersion to $newVersion');
+    debugPrint('Upgrading database from version $oldVersion to $newVersion');
+    
+    if (oldVersion < 2) {
+      debugPrint('Upgrading to version 2...');
+      // Add new columns or tables for version 2
     }
+    
+    if (oldVersion < 3) {
+      debugPrint('Upgrading to version 3...');
+      // Add new columns or tables for version 3
+    }
+    
+    if (oldVersion < 4) {
+      debugPrint('Upgrading to version 4...');
+      // Update audit_log table schema for version 4
+      try {
+        debugPrint('Updating audit_log table schema for version 4...');
+        
+        // Drop the old audit_log table if it exists
+        await db.execute('DROP TABLE IF EXISTS $_auditLogTable');
+        
+        // Create the new audit_log table with correct schema
+        await db.execute('''
+          CREATE TABLE $_auditLogTable (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER,
+            action TEXT NOT NULL,
+            tableName TEXT,
+            recordId INTEGER,
+            oldValues TEXT,
+            newValues TEXT,
+            timestamp TEXT NOT NULL,
+            ipAddress TEXT,
+            userAgent TEXT
+          )
+        ''');
+        
+        debugPrint('Audit_log table schema updated successfully for version 4');
+      } catch (e) {
+        debugPrint('Error updating audit_log table schema: $e');
+      }
+    }
+    
+    debugPrint('Database upgrade completed from version $oldVersion to $newVersion');
   }
 
   // Insert default admin user
   Future<void> _insertDefaultAdmin(Database db) async {
-    debugPrint('Creating default admin user...');
-    final adminUser = {
-      'name': 'Admin',
-      'email': 'admin@bloodbank.com',
-      'password': _hashPassword('admin123'),
-      'userType': 'Admin',
-      'bloodGroup': 'N/A',
-      'age': 30,
-      'contactNumber': 'N/A',
-      'createdAt': DateTime.now().toIso8601String(),
-      'updatedAt': DateTime.now().toIso8601String(),
-    };
+    try {
+      debugPrint('Creating default admin user...');
 
-    debugPrint('Admin user data prepared: ${adminUser['email']}');
-    final id = await db.insert(_usersTable, adminUser);
-    debugPrint('Admin user inserted with ID: $id');
-  }
+      // Check if admin user already exists
+      final existingAdmin = await db.query(
+        _usersTable,
+        where: 'email = ?',
+        whereArgs: ['admin@bloodbank.com'],
+        limit: 1,
+      );
 
-  // Insert default blood inventory
-  Future<void> _insertDefaultBloodInventory(Database db) async {
-    final bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-    final quantities = [10, 5, 8, 3, 4, 2, 12, 6];
+      if (existingAdmin.isNotEmpty) {
+        debugPrint('Admin user already exists');
+        return;
+      }
 
-    for (int i = 0; i < bloodGroups.length; i++) {
-      final inventory = {
-        'bloodGroup': bloodGroups[i],
-        'quantity': quantities[i],
-        'status': 'Available',
-        'lastUpdated': DateTime.now().toIso8601String(),
-        'createdBy': 1, // Admin user ID
+      final adminUser = {
+        'name': 'System Administrator',
+        'email': 'admin@bloodbank.com',
+        'password': _hashPassword('admin123'),
+        'userType': 'Admin',
+        'bloodGroup': 'N/A',
+        'age': 30,
+        'contactNumber': '+1234567890',
+        'address': 'System Address',
+        'isActive': 1,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      await db.insert(_bloodInventoryTable, inventory);
+      final id = await db.insert(_usersTable, adminUser);
+      debugPrint('Admin user created with ID: $id');
+
+      // Insert sample blood inventory data
+      await _insertSampleBloodInventory(db);
+    } catch (e) {
+      debugPrint('Error creating admin user: $e');
+    }
+  }
+
+  // Insert sample blood inventory data
+  Future<void> _insertSampleBloodInventory(Database db) async {
+    try {
+      debugPrint('Adding sample blood inventory data...');
+      
+      final bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+      final quantities = [150, 75, 120, 45, 60, 30, 180, 90];
+      final statuses = ['Available', 'Available', 'Available', 'Available', 'Available', 'Available', 'Available', 'Available'];
+
+      for (int i = 0; i < bloodGroups.length; i++) {
+        final inventory = {
+          'bloodGroup': bloodGroups[i],
+          'quantity': quantities[i],
+          'reservedQuantity': 0,
+          'status': statuses[i],
+          'lastUpdated': DateTime.now().toIso8601String(),
+          'createdBy': 1, // Admin user ID
+          'notes': 'Initial stock - Sample data',
+        };
+
+        await db.insert(_bloodInventoryTable, inventory);
+      }
+      
+      debugPrint('Sample blood inventory data added successfully');
+    } catch (e) {
+      debugPrint('Error adding sample blood inventory: $e');
     }
   }
 
@@ -194,35 +312,30 @@ class DatabaseHelper {
 
   // Initialize database (public method)
   static Future<void> initializeDatabase() async {
+    if (_isInitialized) {
+      debugPrint('Database already initialized');
+      return;
+    }
+
     try {
       debugPrint('Starting database initialization...');
+      debugPrint('Database version: $_databaseVersion');
+      
+      // Initialize database factory for desktop platforms
+      await initializeDatabaseFactory();
+      
       final dbHelper = DatabaseHelper();
-      final db = await dbHelper.database;
-      debugPrint('Database connection established successfully');
-
-      // Test database by checking if admin user exists
-      final adminUser = await dbHelper.getUserByEmail('admin@bloodbank.com');
-      if (adminUser != null) {
-        debugPrint(
-          'Admin user found: ${adminUser['name']} (ID: ${adminUser['id']})',
-        );
+      await dbHelper.database;
+      _isInitialized = true;
+      debugPrint('Database initialization completed successfully');
+      
+      // Verify database structure
+      final structureCheck = await dbHelper.checkDatabaseStructure();
+      if (structureCheck['status'] == 'success') {
+        debugPrint('Database structure verification passed');
       } else {
-        debugPrint('Admin user not found - checking all users...');
-        final allUsers = await dbHelper.getAllUsers();
-        debugPrint('Total users in database: ${allUsers.length}');
-        for (final user in allUsers) {
-          debugPrint(
-            'User: ${user['name']} (${user['email']}) - ID: ${user['id']}',
-          );
-        }
-
-        // If no admin user exists, create one
-        debugPrint('Creating default admin user...');
-        await dbHelper._insertDefaultAdmin(db);
-        debugPrint('Default admin user created successfully');
+        debugPrint('Database structure verification failed: ${structureCheck['error']}');
       }
-
-      debugPrint('Database initialized successfully');
     } catch (e) {
       debugPrint('Database initialization error: $e');
       rethrow;
@@ -235,7 +348,12 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getAllUsers() async {
     try {
       final db = await database;
-      final result = await db.query(_usersTable, orderBy: 'createdAt DESC');
+      final result = await db.query(
+        _usersTable,
+        orderBy: 'createdAt DESC',
+        where: 'isActive = ?',
+        whereArgs: [1],
+      );
       return result;
     } catch (e) {
       debugPrint('Error getting all users: $e');
@@ -243,18 +361,53 @@ class DatabaseHelper {
     }
   }
 
+  // Get all users including inactive
+  Future<List<Map<String, dynamic>>> getAllUsersIncludingInactive() async {
+    try {
+      final db = await database;
+      final result = await db.query(_usersTable, orderBy: 'createdAt DESC');
+      return result;
+    } catch (e) {
+      debugPrint('Error getting all users including inactive: $e');
+      return [];
+    }
+  }
+
   // Get user by email
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
     try {
+      debugPrint('🔍 Looking up user by email: $email');
       final db = await database;
+      debugPrint('✅ Database connection established for user lookup');
+
       final result = await db.query(
         _usersTable,
-        where: 'email = ?',
-        whereArgs: [email],
+        where: 'email = ? AND isActive = ?',
+        whereArgs: [email, 1],
       );
-      return result.isNotEmpty ? result.first : null;
+
+      debugPrint('📊 Query result: ${result.length} rows found');
+
+      if (result.isNotEmpty) {
+        debugPrint(
+            '✅ User found: ${result.first['name']} (${result.first['userType']})');
+        return result.first;
+      } else {
+        debugPrint('❌ User not found for email: $email');
+        // Let's check if the user exists but is inactive
+        final allUsers = await db.query(
+          _usersTable,
+          where: 'email = ?',
+          whereArgs: [email],
+        );
+        if (allUsers.isNotEmpty) {
+          debugPrint(
+              '⚠️ User exists but is inactive: ${allUsers.first['name']}');
+        }
+        return null;
+      }
     } catch (e) {
-      debugPrint('Error getting user by email: $e');
+      debugPrint('❌ Error getting user by email: $e');
       return null;
     }
   }
@@ -276,35 +429,46 @@ class DatabaseHelper {
   }
 
   // Authenticate user
-  Future<bool> authenticateUser(String email, String password) async {
+  Future<Map<String, dynamic>?> authenticateUser(
+      String email, String password) async {
     try {
-      debugPrint('Attempting authentication for email: $email');
+      debugPrint('🔐 Attempting authentication for email: $email');
       final user = await getUserByEmail(email);
       if (user != null) {
-        debugPrint('User found: ${user['name']} (${user['userType']})');
+        debugPrint('✅ User found: ${user['name']} (${user['userType']})');
         final hashedPassword = _hashPassword(password);
         final passwordMatch = user['password'] == hashedPassword;
-        debugPrint('Password match: $passwordMatch');
-        return passwordMatch;
+        debugPrint('🔑 Password match: $passwordMatch');
+
+        if (passwordMatch) {
+          debugPrint('✅ Authentication successful');
+          // Update last login
+          await updateUser(
+              user['id'], {'lastLogin': DateTime.now().toIso8601String()});
+          return user;
+        } else {
+          debugPrint('❌ Password mismatch');
+        }
       } else {
-        debugPrint('User not found for email: $email');
+        debugPrint('❌ User not found for email: $email');
       }
-      return false;
+      return null;
     } catch (e) {
-      debugPrint('Authentication error: $e');
-      return false;
+      debugPrint('❌ Authentication error: $e');
+      return null;
     }
   }
 
   // Insert new user
   Future<bool> insertUser(Map<String, dynamic> userData) async {
     try {
-      debugPrint('Attempting to create user: ${userData['email']}');
+      debugPrint('🔧 Attempting to create user: ${userData['email']}');
       final db = await database;
+      debugPrint('✅ Database connection established for user creation');
 
       // Hash password
       final hashedPassword = _hashPassword(userData['password']);
-      debugPrint('Password hashed successfully');
+      debugPrint('🔐 Password hashed successfully');
 
       // Prepare user data
       final user = {
@@ -312,19 +476,39 @@ class DatabaseHelper {
         'email': userData['email'],
         'password': hashedPassword,
         'userType': userData['userType'],
-        'bloodGroup': userData['bloodGroup'],
-        'age': userData['age'],
-        'contactNumber': userData['contactNumber'],
+        'bloodGroup': userData['bloodGroup'] ?? 'N/A',
+        'age': userData['age'] ?? 0,
+        'contactNumber': userData['contactNumber'] ?? '',
+        'address': userData['address'] ?? '',
+        'isActive': 1,
         'createdAt': DateTime.now().toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      debugPrint('Inserting user into database...');
+      debugPrint('📝 User data prepared: ${user['name']} (${user['email']})');
+      debugPrint('📝 User type: ${user['userType']}');
+      debugPrint('📝 Blood group: ${user['bloodGroup']}');
+
       final id = await db.insert(_usersTable, user);
-      debugPrint('User created with ID: $id');
+      debugPrint('✅ User created with ID: $id');
+
+      // Verify the insertion
+      final verifyUser = await getUserByEmail(userData['email']);
+      if (verifyUser != null) {
+        debugPrint('✅ User verification successful: ${verifyUser['name']}');
+      } else {
+        debugPrint(
+            '❌ User verification failed - user not found after insertion');
+      }
+
+      // Log the action
+      await _logAuditAction(
+          null, 'CREATE', _usersTable, id, null, jsonEncode(user));
+
       return id > 0;
     } catch (e) {
-      debugPrint('Error inserting user: $e');
+      debugPrint('❌ Error inserting user: $e');
+      debugPrint('❌ Error details: ${e.toString()}');
       return false;
     }
   }
@@ -333,6 +517,10 @@ class DatabaseHelper {
   Future<bool> updateUser(int userId, Map<String, dynamic> userData) async {
     try {
       final db = await database;
+
+      // Get old values for audit log
+      final oldUser = await getUserById(userId);
+      final oldValues = oldUser != null ? jsonEncode(oldUser) : null;
 
       // Handle password update
       if (userData.containsKey('password')) {
@@ -347,6 +535,13 @@ class DatabaseHelper {
         where: 'id = ?',
         whereArgs: [userId],
       );
+
+      if (count > 0) {
+        // Log the action
+        await _logAuditAction(userId, 'UPDATE', _usersTable, userId, oldValues,
+            jsonEncode(userData));
+      }
+
       return count > 0;
     } catch (e) {
       debugPrint('Error updating user: $e');
@@ -354,18 +549,41 @@ class DatabaseHelper {
     }
   }
 
-  // Delete user
+  // Delete user (soft delete)
   Future<bool> deleteUser(int userId) async {
     try {
       final db = await database;
-      final count = await db.delete(
+      final count = await db.update(
         _usersTable,
+        {'isActive': 0, 'updatedAt': DateTime.now().toIso8601String()},
         where: 'id = ?',
         whereArgs: [userId],
       );
+
+      if (count > 0) {
+        // Log the action
+        await _logAuditAction(
+            userId, 'DELETE', _usersTable, userId, null, null);
+      }
+
       return count > 0;
     } catch (e) {
       debugPrint('Error deleting user: $e');
+      return false;
+    }
+  }
+
+  // Toggle user status
+  Future<bool> toggleUserStatus(int userId) async {
+    try {
+      final user = await getUserById(userId);
+      if (user == null) return false;
+
+      final newStatus = user['isActive'] == 1 ? 0 : 1;
+      final success = await updateUser(userId, {'isActive': newStatus});
+      return success;
+    } catch (e) {
+      debugPrint('Error toggling user status: $e');
       return false;
     }
   }
@@ -376,8 +594,8 @@ class DatabaseHelper {
       final db = await database;
       final result = await db.query(
         _usersTable,
-        where: 'userType = ?',
-        whereArgs: [userType],
+        where: 'userType = ? AND isActive = ?',
+        whereArgs: [userType, 1],
         orderBy: 'createdAt DESC',
       );
       return result;
@@ -416,6 +634,18 @@ class DatabaseHelper {
       return success;
     } catch (e) {
       debugPrint('Error changing password: $e');
+      return false;
+    }
+  }
+
+  // Reset user password
+  Future<bool> resetUserPassword(int userId, String newPassword) async {
+    try {
+      final newHashedPassword = _hashPassword(newPassword);
+      final success = await updateUser(userId, {'password': newHashedPassword});
+      return success;
+    } catch (e) {
+      debugPrint('Error resetting password: $e');
       return false;
     }
   }
@@ -459,6 +689,16 @@ class DatabaseHelper {
   Future<bool> updateBloodInventory(int id, Map<String, dynamic> data) async {
     try {
       final db = await database;
+
+      // Get old values for audit log
+      final oldInventory = await db.query(
+        _bloodInventoryTable,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      final oldValues =
+          oldInventory.isNotEmpty ? jsonEncode(oldInventory.first) : null;
+
       data['lastUpdated'] = DateTime.now().toIso8601String();
 
       final count = await db.update(
@@ -467,6 +707,13 @@ class DatabaseHelper {
         where: 'id = ?',
         whereArgs: [id],
       );
+
+      if (count > 0) {
+        // Log the action
+        await _logAuditAction(null, 'UPDATE', _bloodInventoryTable, id,
+            oldValues, jsonEncode(data));
+      }
+
       return count > 0;
     } catch (e) {
       debugPrint('Error updating blood inventory: $e');
@@ -481,13 +728,23 @@ class DatabaseHelper {
 
       final inventory = {
         'bloodGroup': data['bloodGroup'],
-        'quantity': data['quantity'],
+        'quantity': data['quantity'] ?? 0,
+        'reservedQuantity': data['reservedQuantity'] ?? 0,
         'status': data['status'] ?? 'Available',
+        'expiryDate': data['expiryDate'],
         'lastUpdated': DateTime.now().toIso8601String(),
         'createdBy': data['createdBy'] ?? 1,
+        'notes': data['notes'],
       };
 
       final id = await db.insert(_bloodInventoryTable, inventory);
+
+      if (id > 0) {
+        // Log the action
+        await _logAuditAction(null, 'CREATE', _bloodInventoryTable, id, null,
+            jsonEncode(inventory));
+      }
+
       return id > 0;
     } catch (e) {
       debugPrint('Error adding blood inventory: $e');
@@ -504,6 +761,13 @@ class DatabaseHelper {
         where: 'id = ?',
         whereArgs: [id],
       );
+
+      if (count > 0) {
+        // Log the action
+        await _logAuditAction(
+            null, 'DELETE', _bloodInventoryTable, id, null, null);
+      }
+
       return count > 0;
     } catch (e) {
       debugPrint('Error deleting blood inventory: $e');
@@ -517,8 +781,8 @@ class DatabaseHelper {
       final db = await database;
       final result = await db.query(
         _bloodInventoryTable,
-        where: 'bloodGroup LIKE ? OR status LIKE ?',
-        whereArgs: ['%$query%', '%$query%'],
+        where: 'bloodGroup LIKE ? OR status LIKE ? OR notes LIKE ?',
+        whereArgs: ['%$query%', '%$query%', '%$query%'],
         orderBy: 'bloodGroup ASC',
       );
       return result;
@@ -547,6 +811,48 @@ class DatabaseHelper {
     }
   }
 
+  // Reserve blood units
+  Future<bool> reserveBloodUnits(String bloodGroup, int quantity) async {
+    try {
+      final inventory = await getBloodInventoryByGroup(bloodGroup);
+      if (inventory == null) return false;
+
+      final availableQuantity = inventory['quantity'] as int;
+      final reservedQuantity = inventory['reservedQuantity'] as int;
+      final totalReserved = reservedQuantity + quantity;
+
+      if (availableQuantity < totalReserved) return false;
+
+      final success = await updateBloodInventory(inventory['id'], {
+        'reservedQuantity': totalReserved,
+      });
+      return success;
+    } catch (e) {
+      debugPrint('Error reserving blood units: $e');
+      return false;
+    }
+  }
+
+  // Release reserved blood units
+  Future<bool> releaseBloodUnits(String bloodGroup, int quantity) async {
+    try {
+      final inventory = await getBloodInventoryByGroup(bloodGroup);
+      if (inventory == null) return false;
+
+      final reservedQuantity = inventory['reservedQuantity'] as int;
+      final newReservedQuantity =
+          (reservedQuantity - quantity).clamp(0, reservedQuantity);
+
+      final success = await updateBloodInventory(inventory['id'], {
+        'reservedQuantity': newReservedQuantity,
+      });
+      return success;
+    } catch (e) {
+      debugPrint('Error releasing blood units: $e');
+      return false;
+    }
+  }
+
   // ===== DONATION OPERATIONS =====
 
   // Add donation
@@ -561,13 +867,41 @@ class DatabaseHelper {
         'donationDate': DateTime.now().toIso8601String(),
         'status': donationData['status'] ?? 'Completed',
         'notes': donationData['notes'],
+        'healthCheck': donationData['healthCheck'],
       };
 
       final id = await db.insert(_donationsTable, donation);
+
+      // Update blood inventory
+      if (id > 0) {
+        await _updateBloodInventoryAfterDonation(
+            donationData['bloodGroup'], donationData['quantity']);
+
+        // Log the action
+        await _logAuditAction(donationData['donorId'], 'CREATE',
+            _donationsTable, id, null, jsonEncode(donation));
+      }
+
       return id > 0;
     } catch (e) {
       debugPrint('Error adding donation: $e');
       return false;
+    }
+  }
+
+  // Update blood inventory after donation
+  Future<void> _updateBloodInventoryAfterDonation(
+      String bloodGroup, int quantity) async {
+    try {
+      final inventory = await getBloodInventoryByGroup(bloodGroup);
+      if (inventory != null) {
+        final currentQuantity = inventory['quantity'] as int;
+        await updateBloodInventory(inventory['id'], {
+          'quantity': currentQuantity + quantity,
+        });
+      }
+    } catch (e) {
+      debugPrint('Error updating blood inventory after donation: $e');
     }
   }
 
@@ -588,6 +922,21 @@ class DatabaseHelper {
     }
   }
 
+  // Get all donations
+  Future<List<Map<String, dynamic>>> getAllDonations() async {
+    try {
+      final db = await database;
+      final result = await db.query(
+        _donationsTable,
+        orderBy: 'donationDate DESC',
+      );
+      return result;
+    } catch (e) {
+      debugPrint('Error getting all donations: $e');
+      return [];
+    }
+  }
+
   // ===== BLOOD REQUEST OPERATIONS =====
 
   // Add blood request
@@ -604,10 +953,19 @@ class DatabaseHelper {
         'status': requestData['status'] ?? 'Pending',
         'patientName': requestData['patientName'],
         'hospital': requestData['hospital'],
+        'doctorName': requestData['doctorName'],
+        'contactNumber': requestData['contactNumber'],
         'notes': requestData['notes'],
       };
 
       final id = await db.insert(_requestsTable, request);
+
+      if (id > 0) {
+        // Log the action
+        await _logAuditAction(requestData['requesterId'], 'CREATE',
+            _requestsTable, id, null, jsonEncode(request));
+      }
+
       return id > 0;
     } catch (e) {
       debugPrint('Error adding blood request: $e');
@@ -634,6 +992,98 @@ class DatabaseHelper {
     }
   }
 
+  // Get all blood requests
+  Future<List<Map<String, dynamic>>> getAllBloodRequests() async {
+    try {
+      final db = await database;
+      final result = await db.query(
+        _requestsTable,
+        orderBy: 'requestDate DESC',
+      );
+      return result;
+    } catch (e) {
+      debugPrint('Error getting all blood requests: $e');
+      return [];
+    }
+  }
+
+  // Approve blood request
+  Future<bool> approveBloodRequest(int requestId, int approvedBy) async {
+    try {
+      final db = await database;
+      final count = await db.update(
+        _requestsTable,
+        {
+          'status': 'Approved',
+          'approvedBy': approvedBy,
+          'approvedAt': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [requestId],
+      );
+
+      if (count > 0) {
+        // Log the action
+        await _logAuditAction(approvedBy, 'UPDATE', _requestsTable, requestId,
+            null, jsonEncode({'status': 'Approved'}));
+      }
+
+      return count > 0;
+    } catch (e) {
+      debugPrint('Error approving blood request: $e');
+      return false;
+    }
+  }
+
+  // Reject blood request
+  Future<bool> rejectBloodRequest(
+      int requestId, int rejectedBy, String reason) async {
+    try {
+      final db = await database;
+      final requestData = await getBloodRequestById(requestId);
+      if (requestData == null) return false;
+
+      final count = await db.update(
+        _requestsTable,
+        {
+          'status': 'Rejected',
+          'approvedBy': rejectedBy,
+          'approvedAt': DateTime.now().toIso8601String(),
+          'notes': '${requestData['notes'] ?? ''}\nRejection Reason: $reason',
+        },
+        where: 'id = ?',
+        whereArgs: [requestId],
+      );
+
+      if (count > 0) {
+        // Log the action
+        await _logAuditAction(rejectedBy, 'UPDATE', _requestsTable, requestId,
+            null, jsonEncode({'status': 'Rejected'}));
+      }
+
+      return count > 0;
+    } catch (e) {
+      debugPrint('Error rejecting blood request: $e');
+      return false;
+    }
+  }
+
+  // Get blood request by ID
+  Future<Map<String, dynamic>?> getBloodRequestById(int requestId) async {
+    try {
+      final db = await database;
+      final result = await db.query(
+        _requestsTable,
+        where: 'id = ?',
+        whereArgs: [requestId],
+      );
+      return result.isNotEmpty ? result.first : null;
+    } catch (e) {
+      debugPrint('Error getting blood request by ID: $e');
+      return null;
+    }
+  }
+
   // ===== NOTIFICATION OPERATIONS =====
 
   // Add notification
@@ -646,8 +1096,12 @@ class DatabaseHelper {
         'title': notificationData['title'],
         'message': notificationData['message'],
         'type': notificationData['type'],
+        'priority': notificationData['priority'] ?? 'Normal',
         'isRead': 0,
         'createdAt': DateTime.now().toIso8601String(),
+        'payload': notificationData['payload'] != null
+            ? jsonEncode(notificationData['payload'])
+            : null,
       };
 
       final id = await db.insert(_notificationsTable, notification);
@@ -692,6 +1146,314 @@ class DatabaseHelper {
     }
   }
 
+  // Get unread notifications count
+  Future<int> getUnreadNotificationsCount(int userId) async {
+    try {
+      final db = await database;
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM $_notificationsTable WHERE (userId = ? OR userId IS NULL) AND isRead = 0',
+        [userId],
+      );
+      return result.first['count'] as int;
+    } catch (e) {
+      debugPrint('Error getting unread notifications count: $e');
+      return 0;
+    }
+  }
+
+  // Clear all notifications for user
+  Future<bool> clearNotificationsForUser(int userId) async {
+    try {
+      final db = await database;
+      final count = await db.delete(
+        _notificationsTable,
+        where: 'userId = ?',
+        whereArgs: [userId],
+      );
+      return count > 0;
+    } catch (e) {
+      debugPrint('Error clearing notifications for user: $e');
+      return false;
+    }
+  }
+
+  // ===== USER SESSION OPERATIONS =====
+
+  // Create user session
+  Future<bool> createUserSession(
+      int userId, String sessionToken, String deviceInfo) async {
+    try {
+      final db = await database;
+      final session = {
+        'userId': userId,
+        'sessionToken': sessionToken,
+        'expiresAt': DateTime.now().add(const Duration(days: 7)).toIso8601String(), // 7 days expiry
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+
+      final id = await db.insert(_userSessionsTable, session);
+      return id > 0;
+    } catch (e) {
+      debugPrint('Error creating user session: $e');
+      return false;
+    }
+  }
+
+  // Update session activity
+  Future<bool> updateSessionActivity(int userId) async {
+    try {
+      final db = await database;
+      final count = await db.update(
+        _userSessionsTable,
+        {'lastActivity': DateTime.now().toIso8601String()},
+        where: 'userId = ? AND expiresAt > ?', // Only update if not expired
+        whereArgs: [userId, DateTime.now().toIso8601String()],
+      );
+      return count > 0;
+    } catch (e) {
+      debugPrint('Error updating session activity: $e');
+      return false;
+    }
+  }
+
+  // Invalidate user session
+  Future<bool> invalidateUserSession(int userId) async {
+    try {
+      final db = await database;
+      final count = await db.update(
+        _userSessionsTable,
+        {'isActive': 0},
+        where: 'userId = ?',
+        whereArgs: [userId],
+      );
+      return count > 0;
+    } catch (e) {
+      debugPrint('Error invalidating user session: $e');
+      return false;
+    }
+  }
+
+  // Get user session
+  Future<Map<String, dynamic>?> getUserSession(int userId) async {
+    try {
+      final db = await database;
+      final result = await db.query(
+        _userSessionsTable,
+        where: 'userId = ? AND expiresAt > ?', // Only get if not expired
+        whereArgs: [userId, DateTime.now().toIso8601String()],
+        orderBy: 'lastActivity DESC',
+        limit: 1,
+      );
+      return result.isNotEmpty ? result.first : null;
+    } catch (e) {
+      debugPrint('Error getting user session: $e');
+      return null;
+    }
+  }
+
+  // ===== AUDIT LOG OPERATIONS =====
+
+  // Log audit action
+  Future<void> _logAuditAction(
+    int? userId,
+    String action,
+    String tableName,
+    int? recordId,
+    String? oldValues,
+    String? newValues,
+  ) async {
+    try {
+      final db = await database;
+      final auditLog = {
+        'userId': userId,
+        'action': action,
+        'tableName': tableName,
+        'recordId': recordId,
+        'oldValues': oldValues,
+        'newValues': newValues,
+        'timestamp': DateTime.now().toIso8601String(),
+        'ipAddress': 'localhost', // In a real app, get from request
+        'userAgent': 'BloodBank App', // In a real app, get from request
+      };
+
+      await db.insert(_auditLogTable, auditLog);
+    } catch (e) {
+      debugPrint('Error logging audit action: $e');
+    }
+  }
+
+  // Get audit log
+  Future<List<Map<String, dynamic>>> getAuditLog({
+    int? userId,
+    String? action,
+    String? tableName,
+    int? limit,
+  }) async {
+    try {
+      final db = await database;
+      String whereClause = '';
+      List<dynamic> whereArgs = [];
+
+      if (userId != null) {
+        whereClause += 'userId = ?';
+        whereArgs.add(userId);
+      }
+
+      if (action != null) {
+        if (whereClause.isNotEmpty) whereClause += ' AND ';
+        whereClause += 'action = ?';
+        whereArgs.add(action);
+      }
+
+      if (tableName != null) {
+        if (whereClause.isNotEmpty) whereClause += ' AND ';
+        whereClause += 'tableName = ?';
+        whereArgs.add(tableName);
+      }
+
+      final result = await db.query(
+        _auditLogTable,
+        where: whereClause.isEmpty ? null : whereClause,
+        whereArgs: whereArgs.isEmpty ? null : whereArgs,
+        orderBy: 'timestamp DESC',
+        limit: limit,
+      );
+      return result;
+    } catch (e) {
+      debugPrint('Error getting audit log: $e');
+      return [];
+    }
+  }
+
+  // ===== STATISTICS AND ANALYTICS =====
+
+  // Get dashboard statistics
+  Future<Map<String, dynamic>> getDashboardStatistics() async {
+    try {
+      final db = await database;
+
+      // Get user counts
+      final userCounts = await db.rawQuery('''
+        SELECT userType, COUNT(*) as count 
+        FROM $_usersTable 
+        WHERE isActive = 1 
+        GROUP BY userType
+      ''');
+
+      // Get blood inventory summary
+      final bloodSummary = await db.rawQuery('''
+        SELECT SUM(quantity) as totalUnits, COUNT(*) as bloodGroups
+        FROM $_bloodInventoryTable
+      ''');
+
+      // Get recent donations
+      final recentDonations = await db.rawQuery('''
+        SELECT COUNT(*) as count 
+        FROM $_donationsTable 
+        WHERE donationDate >= datetime('now', '-7 days')
+      ''');
+
+      // Get pending requests
+      final pendingRequests = await db.rawQuery('''
+        SELECT COUNT(*) as count 
+        FROM $_requestsTable 
+        WHERE status = 'Pending'
+      ''');
+
+      return {
+        'userCounts': userCounts,
+        'bloodSummary': bloodSummary.first,
+        'recentDonations': recentDonations.first['count'],
+        'pendingRequests': pendingRequests.first['count'],
+      };
+    } catch (e) {
+      debugPrint('Error getting dashboard statistics: $e');
+      return {};
+    }
+  }
+
+  // Get blood inventory statistics
+  Future<Map<String, dynamic>> getBloodInventoryStatistics() async {
+    try {
+      final db = await database;
+
+      // Get total units by blood group
+      final bloodGroupStats = await db.rawQuery('''
+        SELECT bloodGroup, SUM(quantity) as totalUnits, SUM(reservedQuantity) as reservedUnits
+        FROM $_bloodInventoryTable
+        GROUP BY bloodGroup
+        ORDER BY bloodGroup
+      ''');
+
+      // Get low stock items
+      final lowStockItems = await db.rawQuery('''
+        SELECT bloodGroup, quantity, reservedQuantity
+        FROM $_bloodInventoryTable
+        WHERE (quantity - reservedQuantity) <= 10
+        ORDER BY (quantity - reservedQuantity) ASC
+      ''');
+
+      // Get expiring items
+      final expiringItems = await db.rawQuery('''
+        SELECT bloodGroup, quantity, expiryDate
+        FROM $_bloodInventoryTable
+        WHERE expiryDate IS NOT NULL 
+        AND expiryDate <= datetime('now', '+7 days')
+        ORDER BY expiryDate ASC
+      ''');
+
+      return {
+        'bloodGroupStats': bloodGroupStats,
+        'lowStockItems': lowStockItems,
+        'expiringItems': expiringItems,
+      };
+    } catch (e) {
+      debugPrint('Error getting blood inventory statistics: $e');
+      return {};
+    }
+  }
+
+  // Get user activity statistics
+  Future<Map<String, dynamic>> getUserActivityStatistics() async {
+    try {
+      final db = await database;
+
+      // Get recent logins
+      final recentLogins = await db.rawQuery('''
+        SELECT u.name, u.email, u.lastLogin
+        FROM $_usersTable u
+        WHERE u.lastLogin IS NOT NULL
+        ORDER BY u.lastLogin DESC
+        LIMIT 10
+      ''');
+
+      // Get active sessions
+      final activeSessions = await db.rawQuery('''
+        SELECT COUNT(*) as count
+        FROM $_userSessionsTable
+        WHERE expiresAt > ?
+      ''', [DateTime.now().toIso8601String()]);
+
+      // Get user registrations by month
+      final registrationsByMonth = await db.rawQuery('''
+        SELECT strftime('%Y-%m', createdAt) as month, COUNT(*) as count
+        FROM $_usersTable
+        WHERE createdAt >= datetime('now', '-12 months')
+        GROUP BY month
+        ORDER BY month DESC
+      ''');
+
+      return {
+        'recentLogins': recentLogins,
+        'activeSessions': activeSessions.first['count'],
+        'registrationsByMonth': registrationsByMonth,
+      };
+    } catch (e) {
+      debugPrint('Error getting user activity statistics: $e');
+      return {};
+    }
+  }
+
   // Close database
   Future<void> close() async {
     try {
@@ -699,6 +1461,63 @@ class DatabaseHelper {
       debugPrint('Database closed successfully');
     } catch (e) {
       debugPrint('Error closing database: $e');
+    }
+  }
+
+  // Check database structure
+  Future<Map<String, dynamic>> checkDatabaseStructure() async {
+    try {
+      debugPrint('🔍 Checking database structure...');
+      final db = await database;
+      
+      // Check if users table exists
+      final tables = await db.query('sqlite_master', 
+        where: 'type = ? AND name = ?', 
+        whereArgs: ['table', _usersTable]);
+      
+      if (tables.isEmpty) {
+        debugPrint('❌ Users table not found');
+        return {
+          'status': 'error',
+          'error': 'Users table not found',
+          'message': 'Database structure is incomplete'
+        };
+      }
+      
+      // Check table columns
+      final columns = await db.rawQuery('PRAGMA table_info($_usersTable)');
+      final requiredColumns = [
+        'id', 'name', 'email', 'password', 'userType', 
+        'bloodGroup', 'age', 'contactNumber', 'address', 
+        'isActive', 'lastLogin', 'createdAt', 'updatedAt'
+      ];
+      
+      final existingColumns = columns.map((col) => col['name'] as String).toList();
+      final missingColumns = requiredColumns.where((col) => !existingColumns.contains(col)).toList();
+      
+      if (missingColumns.isNotEmpty) {
+        debugPrint('❌ Missing columns: $missingColumns');
+        return {
+          'status': 'error',
+          'error': 'Missing columns: $missingColumns',
+          'message': 'Database structure is incomplete'
+        };
+      }
+      
+      debugPrint('✅ Database structure check passed');
+      return {
+        'status': 'success',
+        'message': 'Database structure is correct',
+        'tables': ['users', 'blood_inventory', 'donations', 'blood_requests', 'notifications', 'user_sessions', 'audit_log'],
+        'columns': existingColumns
+      };
+    } catch (e) {
+      debugPrint('❌ Database structure check failed: $e');
+      return {
+        'status': 'error',
+        'error': e.toString(),
+        'message': 'Database structure check failed'
+      };
     }
   }
 }

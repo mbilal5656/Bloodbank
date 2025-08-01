@@ -1,55 +1,39 @@
 import 'package:flutter/material.dart';
-import 'services/data_service.dart';
-import 'notification_helper.dart';
-import 'session_manager.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'splash_screen.dart';
 import 'home_page.dart';
 import 'login_page.dart';
 import 'signup_page.dart';
+import 'forgot_password_page.dart';
 import 'admin_page.dart';
 import 'donor_page.dart';
 import 'receiver_page.dart';
 import 'profile_page.dart';
-import 'contact_page.dart';
 import 'settings_page.dart';
-import 'forgot_password_page.dart';
+import 'contact_page.dart';
 import 'blood_inventory_page.dart';
 import 'notification_management_page.dart';
-
-// Global user session class
-class UserSession {
-  static String userType = '';
-  static String email = '';
-  static String userName = '';
-  static int userId = 0;
-}
+import 'notification_helper.dart';
+import 'session_manager.dart';
+import 'theme/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    // Initialize SQLite database with default admin user
-    await DataService.initializeDatabase();
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
-    // Initialize notifications
-    await NotificationHelper.initializeNotifications();
-
-    // Load user session if exists
-    final sessionData = await SessionManager.getSessionData();
-    if (sessionData.isNotEmpty) {
-      UserSession.userId = sessionData['userId'] ?? 0;
-      UserSession.email = sessionData['email'] ?? '';
-      UserSession.userType = sessionData['userType'] ?? '';
-      UserSession.userName = sessionData['userName'] ?? '';
-    }
-
-    debugPrint('Blood Bank App initialized successfully');
-  } catch (e) {
-    debugPrint('Error initializing app: $e');
-    // Continue with app launch even if there are initialization errors
-  }
-
-  runApp(const BloodBankApp());
+  // Start the app immediately
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const BloodBankApp(),
+    ),
+  );
 }
 
 class BloodBankApp extends StatelessWidget {
@@ -57,215 +41,283 @@ class BloodBankApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Blood Bank Management System',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        useMaterial3: true,
-      ),
-      initialRoute: '/splash',
-      routes: {
-        '/splash': (context) => const SplashScreen(),
-        '/home': (context) => const HomePage(),
-        '/login': (context) => const LoginPage(),
-        '/signup': (context) => const SignupPage(),
-        '/admin': (context) => const AdminPage(),
-        '/donor': (context) => const DonorPage(),
-        '/receiver': (context) => const ReceiverPage(),
-        '/profile': (context) => const ProfilePage(),
-        '/contact': (context) => const ContactPage(),
-        '/settings': (context) => const SettingsPage(),
-        '/forgot_password': (context) => const ForgotPasswordPage(),
-        '/blood_inventory': (context) => const BloodInventoryPage(),
-        '/notification_management': (context) =>
-            const NotificationManagementPage(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'Blood Bank Management System',
+          debugShowCheckedModeBanner: false,
+          theme: themeProvider.currentTheme,
+          home: const SplashScreen(),
+          routes: {
+            '/home': (context) => const HomePage(),
+            '/login': (context) => const LoginPage(),
+            '/signup': (context) => const SignupPage(),
+            '/forgot-password': (context) => const ForgotPasswordPage(),
+            '/admin': (context) => const AdminPage(),
+            '/donor': (context) => const DonorPage(),
+            '/receiver': (context) => const ReceiverPage(),
+            '/profile': (context) => const ProfilePage(),
+            '/settings': (context) => const SettingsPage(),
+            '/contact': (context) => const ContactPage(),
+            '/blood-inventory': (context) => const BloodInventoryPage(),
+            '/notification-management': (context) =>
+                const NotificationManagementPage(),
+          },
+        );
       },
-      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-// Enhanced Blood Inventory with database integration
-class BloodInventory {
-  static final DataService _dataService = DataService();
+// Global session management
+class UserSession {
+  static int? userId;
+  static String? email;
+  static String? userType;
+  static String? userName;
+  static bool isLoggedIn = false;
 
-  static Future<Map<String, int>> getBloodStock() async {
-    try {
-      return await _dataService.getBloodInventorySummary();
-    } catch (e) {
-      debugPrint('Error getting blood stock: $e');
-      return {};
-    }
+  static void clear() {
+    userId = null;
+    email = null;
+    userType = null;
+    userName = null;
+    isLoggedIn = false;
   }
 
-  static Future<bool> checkBloodAvailability(String bloodType) async {
-    try {
-      final inventory = await _dataService.getBloodInventoryByGroup(bloodType);
-      return inventory != null && inventory.isAvailable;
-    } catch (e) {
-      debugPrint('Error checking blood availability: $e');
-      return false;
-    }
-  }
-
-  static Future<bool> updateBloodStock(String bloodType, int quantity) async {
-    try {
-      final inventory = await _dataService.getBloodInventoryByGroup(bloodType);
-      if (inventory != null) {
-        return await _dataService.updateBloodInventory(inventory.id!, {
-          'quantity': quantity,
-        });
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error updating blood stock: $e');
-      return false;
-    }
+  static void update({
+    required int id,
+    required String userEmail,
+    required String type,
+    required String name,
+  }) {
+    userId = id;
+    email = userEmail;
+    userType = type;
+    userName = name;
+    isLoggedIn = true;
   }
 }
 
-// Enhanced Donor Eligibility Checker with database integration
-class DonorEligibility {
-  static final DataService _dataService = DataService();
-
-  static Future<bool> checkEligibility(
-    int age,
-    String bloodType, {
-    bool hasRecentDonation = false,
-  }) async {
-    try {
-      // Check age requirements
-      if (age < 18 || age > 65) return false;
-
-      // Check recent donation
-      if (hasRecentDonation) return false;
-
-      // Check blood type availability
-      final isAvailable = await BloodInventory.checkBloodAvailability(
-        bloodType,
-      );
-      return isAvailable;
-    } catch (e) {
-      debugPrint('Error checking donor eligibility: $e');
-      return false;
-    }
-  }
-
-  static Future<bool> checkDonorHistory(int donorId) async {
-    try {
-      final donations = await _dataService.getDonationsByDonor(donorId);
-      if (donations.isEmpty) return true;
-
-      // Check if last donation was within 3 months
-      final lastDonation = donations.first;
-      final lastDonationDate = DateTime.parse(lastDonation['donationDate']);
-      final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
-
-      return lastDonationDate.isBefore(threeMonthsAgo);
-    } catch (e) {
-      debugPrint('Error checking donor history: $e');
-      return false;
-    }
-  }
-}
-
-// Database utility functions
-class DatabaseUtils {
-  static final DataService _dataService = DataService();
-
-  // Get database statistics
-  static Future<Map<String, dynamic>> getDatabaseStats() async {
-    try {
-      return await _dataService.getDatabaseStats();
-    } catch (e) {
-      debugPrint('Error getting database stats: $e');
-      return {};
-    }
-  }
-
-  // Validate user data
-  static bool validateUserData(Map<String, dynamic> userData) {
-    return DataService.validateUserData(userData);
-  }
-
-  // Validate blood inventory data
-  static bool validateBloodInventoryData(Map<String, dynamic> inventoryData) {
-    return DataService.validateBloodInventoryData(inventoryData);
-  }
-
-  // Close database connection
-  static Future<void> closeDatabase() async {
-    try {
-      await _dataService.close();
-    } catch (e) {
-      debugPrint('Error closing database: $e');
-    }
-  }
-}
-
-// Navigation utility class
+// Navigation utilities
 class NavigationUtils {
-  // Navigate to appropriate page based on user type
+  static void navigateToHome(BuildContext context) {
+    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+  }
+
+  static void navigateToLogin(BuildContext context) {
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
+
   static void navigateToUserPage(BuildContext context, String userType) {
-    switch (userType) {
-      case 'Admin':
-        Navigator.of(context).pushReplacementNamed('/admin');
-        break;
-      case 'Donor':
-        Navigator.of(context).pushReplacementNamed('/donor');
-        break;
-      case 'Receiver':
-        Navigator.of(context).pushReplacementNamed('/receiver');
-        break;
-      default:
-        Navigator.of(context).pushReplacementNamed('/home');
-        break;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/user/$userType',
+      (route) => false,
+    );
+  }
+
+  static void navigateToPage(BuildContext context, String route) {
+    Navigator.pushNamed(context, route);
+  }
+
+  static void navigateBack(BuildContext context) {
+    Navigator.pop(context);
+  }
+
+  static void navigateToProfile(BuildContext context) {
+    Navigator.pushNamed(context, '/profile');
+  }
+
+  static void navigateToSettings(BuildContext context) {
+    Navigator.pushNamed(context, '/settings');
+  }
+
+  static void navigateToContact(BuildContext context) {
+    Navigator.pushNamed(context, '/contact');
+  }
+
+  static void navigateToBloodInventory(BuildContext context) {
+    Navigator.pushNamed(context, '/blood_inventory');
+  }
+
+  static void navigateToNotificationManagement(BuildContext context) {
+    Navigator.pushNamed(context, '/notifications');
+  }
+
+  static Future<void> logout(BuildContext context) async {
+    try {
+      // Clear session
+      await SessionManager.clearSession();
+      UserSession.clear();
+
+      // Cancel all notifications
+      await NotificationHelper.cancelAllScheduledNotifications();
+
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      }
+    } catch (e) {
+      debugPrint('Error during logout: $e');
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      }
     }
   }
 
-  // Navigate to home page
-  static void navigateToHome(BuildContext context) {
-    Navigator.of(context).pushReplacementNamed('/home');
+  static void showErrorDialog(
+      BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  // Navigate to login page
-  static void navigateToLogin(BuildContext context) {
-    Navigator.of(context).pushReplacementNamed('/login');
+  static void showSuccessDialog(
+      BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  // Navigate to profile page
-  static void navigateToProfile(BuildContext context) {
-    Navigator.of(context).pushNamed('/profile');
+  static void showConfirmationDialog(
+    BuildContext context,
+    String title,
+    String message,
+    VoidCallback onConfirm,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                onConfirm();
+              },
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Utility functions
+class AppUtils {
+  static String formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 
-  // Navigate to settings page
-  static void navigateToSettings(BuildContext context) {
-    Navigator.of(context).pushNamed('/settings');
+  static String formatDateTime(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute}';
   }
 
-  // Navigate to contact page
-  static void navigateToContact(BuildContext context) {
-    Navigator.of(context).pushNamed('/contact');
+  static String getBloodGroupColor(String bloodGroup) {
+    switch (bloodGroup.toUpperCase()) {
+      case 'A+':
+      case 'A-':
+        return '#FF4444';
+      case 'B+':
+      case 'B-':
+        return '#44FF44';
+      case 'AB+':
+      case 'AB-':
+        return '#4444FF';
+      case 'O+':
+      case 'O-':
+        return '#FFAA44';
+      default:
+        return '#888888';
+    }
   }
 
-  // Navigate to blood inventory page
-  static void navigateToBloodInventory(BuildContext context) {
-    Navigator.of(context).pushNamed('/blood_inventory');
+  static String getUrgencyColor(String urgency) {
+    switch (urgency.toLowerCase()) {
+      case 'critical':
+        return '#FF0000';
+      case 'urgent':
+        return '#FF6600';
+      case 'normal':
+        return '#00AA00';
+      default:
+        return '#888888';
+    }
   }
 
-  // Navigate to notification management page
-  static void navigateToNotificationManagement(BuildContext context) {
-    Navigator.of(context).pushNamed('/notification_management');
+  static String getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+      case 'approved':
+        return '#00AA00';
+      case 'pending':
+        return '#FFAA00';
+      case 'rejected':
+      case 'cancelled':
+        return '#FF0000';
+      default:
+        return '#888888';
+    }
   }
 
-  // Logout and navigate to home
-  static Future<void> logout(BuildContext context) async {
-    await SessionManager.clearSession();
-    UserSession.userType = '';
-    UserSession.email = '';
-    UserSession.userName = '';
-    UserSession.userId = 0;
-    Navigator.of(context).pushReplacementNamed('/home');
+  static bool isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  static bool isValidPhone(String phone) {
+    return RegExp(r'^\+?[\d\s-]{10,}$').hasMatch(phone);
+  }
+
+  static String capitalize(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+  }
+
+  static String truncateText(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    return '${text.substring(0, maxLength)}...';
+  }
+
+  static void showSnackBar(BuildContext context, String message,
+      {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 }

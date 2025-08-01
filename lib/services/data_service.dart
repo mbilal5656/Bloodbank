@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 import '../db_helper.dart';
-import '../models/user_model.dart';
-import '../models/blood_inventory_model.dart';
 
 class DataService {
   static final DataService _instance = DataService._internal();
@@ -10,106 +8,122 @@ class DataService {
 
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
+  // Initialize database
+  static Future<void> initializeDatabase() async {
+    try {
+      if (kIsWeb) {
+        debugPrint('DataService: Web platform - skipping SQLite initialization');
+        return;
+      }
+      await DatabaseHelper.initializeDatabase();
+      debugPrint('DataService: Database initialized successfully');
+    } catch (e) {
+      debugPrint('DataService: Error initializing database: $e');
+      rethrow;
+    }
+  }
+
+
+
   // ===== USER OPERATIONS =====
 
   // Get all users
-  Future<List<UserModel>> getAllUsers() async {
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
     try {
-      debugPrint('DataService: Getting all users...');
-      final users = await _dbHelper.getAllUsers();
-      debugPrint('DataService: Retrieved ${users.length} users from database');
-      final userModels = users.map((user) => UserModel.fromMap(user)).toList();
-      debugPrint(
-        'DataService: Converted to ${userModels.length} UserModel instances',
-      );
-      return userModels;
+      return await _dbHelper.getAllUsers();
     } catch (e) {
-      debugPrint('Error getting all users: $e');
+      debugPrint('DataService: Error getting all users: $e');
+      return [];
+    }
+  }
+
+  // Get all users including inactive
+  Future<List<Map<String, dynamic>>> getAllUsersIncludingInactive() async {
+    try {
+      return await _dbHelper.getAllUsersIncludingInactive();
+    } catch (e) {
+      debugPrint('DataService: Error getting all users including inactive: $e');
       return [];
     }
   }
 
   // Get user by email
-  Future<UserModel?> getUserByEmail(String email) async {
+  Future<Map<String, dynamic>?> getUserByEmail(String email) async {
     try {
-      debugPrint('DataService: Getting user by email: $email');
-      final user = await _dbHelper.getUserByEmail(email);
-      if (user != null) {
-        debugPrint(
-          'DataService: User found: ${user['name']} (${user['email']})',
-        );
-        return UserModel.fromMap(user);
-      } else {
-        debugPrint('DataService: User not found for email: $email');
-        return null;
-      }
+      return await _dbHelper.getUserByEmail(email);
     } catch (e) {
-      debugPrint('Error getting user by email: $e');
+      debugPrint('DataService: Error getting user by email: $e');
       return null;
     }
   }
 
   // Get user by ID
-  Future<UserModel?> getUserById(int userId) async {
+  Future<Map<String, dynamic>?> getUserById(int userId) async {
     try {
-      final user = await _dbHelper.getUserById(userId);
-      return user != null ? UserModel.fromMap(user) : null;
+      return await _dbHelper.getUserById(userId);
     } catch (e) {
-      debugPrint('Error getting user by ID: $e');
+      debugPrint('DataService: Error getting user by ID: $e');
       return null;
     }
   }
 
   // Authenticate user
-  Future<bool> authenticateUser(String email, String password) async {
+  Future<Map<String, dynamic>?> authenticateUser(
+      String email, String password) async {
     try {
       return await _dbHelper.authenticateUser(email, password);
     } catch (e) {
-      debugPrint('Error authenticating user: $e');
-      return false;
+      debugPrint('DataService: Error authenticating user: $e');
+      return null;
     }
   }
 
-  // Create new user
-  Future<bool> createUser(UserModel user) async {
+  // Insert new user
+  Future<bool> insertUser(Map<String, dynamic> userData) async {
     try {
-      debugPrint('DataService: Creating user: ${user.name} (${user.email})');
-      final result = await _dbHelper.insertUser(user.toMap());
-      debugPrint('DataService: User creation result: $result');
-      return result;
+      return await _dbHelper.insertUser(userData);
     } catch (e) {
-      debugPrint('Error creating user: $e');
+      debugPrint('DataService: Error inserting user: $e');
       return false;
     }
   }
 
   // Update user
-  Future<bool> updateUser(int userId, Map<String, dynamic> data) async {
+  Future<bool> updateUser(int userId, Map<String, dynamic> userData) async {
     try {
-      return await _dbHelper.updateUser(userId, data);
+      return await _dbHelper.updateUser(userId, userData);
     } catch (e) {
-      debugPrint('Error updating user: $e');
+      debugPrint('DataService: Error updating user: $e');
       return false;
     }
   }
 
-  // Delete user
+  // Delete user (soft delete)
   Future<bool> deleteUser(int userId) async {
     try {
       return await _dbHelper.deleteUser(userId);
     } catch (e) {
-      debugPrint('Error deleting user: $e');
+      debugPrint('DataService: Error deleting user: $e');
+      return false;
+    }
+  }
+
+  // Toggle user status
+  Future<bool> toggleUserStatus(int userId) async {
+    try {
+      return await _dbHelper.toggleUserStatus(userId);
+    } catch (e) {
+      debugPrint('DataService: Error toggling user status: $e');
       return false;
     }
   }
 
   // Get users by type
-  Future<List<UserModel>> getUsersByType(String userType) async {
+  Future<List<Map<String, dynamic>>> getUsersByType(String userType) async {
     try {
-      final users = await _dbHelper.getUsersByType(userType);
-      return users.map((user) => UserModel.fromMap(user)).toList();
+      return await _dbHelper.getUsersByType(userType);
     } catch (e) {
-      debugPrint('Error getting users by type: $e');
+      debugPrint('DataService: Error getting users by type: $e');
       return [];
     }
   }
@@ -119,21 +133,28 @@ class DataService {
     try {
       return await _dbHelper.emailExists(email);
     } catch (e) {
-      debugPrint('Error checking email existence: $e');
+      debugPrint('DataService: Error checking email existence: $e');
       return false;
     }
   }
 
   // Change password
   Future<bool> changePassword(
-    int userId,
-    String oldPassword,
-    String newPassword,
-  ) async {
+      int userId, String oldPassword, String newPassword) async {
     try {
       return await _dbHelper.changePassword(userId, oldPassword, newPassword);
     } catch (e) {
-      debugPrint('Error changing password: $e');
+      debugPrint('DataService: Error changing password: $e');
+      return false;
+    }
+  }
+
+  // Reset user password
+  Future<bool> resetUserPassword(int userId, String newPassword) async {
+    try {
+      return await _dbHelper.resetUserPassword(userId, newPassword);
+    } catch (e) {
+      debugPrint('DataService: Error resetting password: $e');
       return false;
     }
   }
@@ -141,27 +162,42 @@ class DataService {
   // ===== BLOOD INVENTORY OPERATIONS =====
 
   // Get all blood inventory
-  Future<List<BloodInventoryModel>> getAllBloodInventory() async {
+  Future<List<Map<String, dynamic>>> getAllBloodInventory() async {
     try {
-      final inventory = await _dbHelper.getAllBloodInventory();
-      return inventory
-          .map((item) => BloodInventoryModel.fromMap(item))
-          .toList();
+      return await _dbHelper.getAllBloodInventory();
     } catch (e) {
-      debugPrint('Error getting all blood inventory: $e');
+      debugPrint('DataService: Error getting blood inventory: $e');
+      return [];
+    }
+  }
+
+  // Get all donations
+  Future<List<Map<String, dynamic>>> getAllDonations() async {
+    try {
+      return await _dbHelper.getAllDonations();
+    } catch (e) {
+      debugPrint('DataService: Error getting donations: $e');
+      return [];
+    }
+  }
+
+  // Get all blood requests
+  Future<List<Map<String, dynamic>>> getAllBloodRequests() async {
+    try {
+      return await _dbHelper.getAllBloodRequests();
+    } catch (e) {
+      debugPrint('DataService: Error getting blood requests: $e');
       return [];
     }
   }
 
   // Get blood inventory by group
-  Future<BloodInventoryModel?> getBloodInventoryByGroup(
-    String bloodGroup,
-  ) async {
+  Future<Map<String, dynamic>?> getBloodInventoryByGroup(
+      String bloodGroup) async {
     try {
-      final inventory = await _dbHelper.getBloodInventoryByGroup(bloodGroup);
-      return inventory != null ? BloodInventoryModel.fromMap(inventory) : null;
+      return await _dbHelper.getBloodInventoryByGroup(bloodGroup);
     } catch (e) {
-      debugPrint('Error getting blood inventory by group: $e');
+      debugPrint('DataService: Error getting blood inventory by group: $e');
       return null;
     }
   }
@@ -171,40 +207,37 @@ class DataService {
     try {
       return await _dbHelper.updateBloodInventory(id, data);
     } catch (e) {
-      debugPrint('Error updating blood inventory: $e');
+      debugPrint('DataService: Error updating blood inventory: $e');
       return false;
     }
   }
 
-  // Add blood inventory
-  Future<bool> addBloodInventory(BloodInventoryModel inventory) async {
+  // Add new blood inventory item
+  Future<bool> addBloodInventory(Map<String, dynamic> data) async {
     try {
-      return await _dbHelper.addBloodInventory(inventory.toMap());
+      return await _dbHelper.addBloodInventory(data);
     } catch (e) {
-      debugPrint('Error adding blood inventory: $e');
+      debugPrint('DataService: Error adding blood inventory: $e');
       return false;
     }
   }
 
-  // Delete blood inventory
+  // Delete blood inventory item
   Future<bool> deleteBloodInventory(int id) async {
     try {
       return await _dbHelper.deleteBloodInventory(id);
     } catch (e) {
-      debugPrint('Error deleting blood inventory: $e');
+      debugPrint('DataService: Error deleting blood inventory: $e');
       return false;
     }
   }
 
   // Search blood inventory
-  Future<List<BloodInventoryModel>> searchBloodInventory(String query) async {
+  Future<List<Map<String, dynamic>>> searchBloodInventory(String query) async {
     try {
-      final inventory = await _dbHelper.searchBloodInventory(query);
-      return inventory
-          .map((item) => BloodInventoryModel.fromMap(item))
-          .toList();
+      return await _dbHelper.searchBloodInventory(query);
     } catch (e) {
-      debugPrint('Error searching blood inventory: $e');
+      debugPrint('DataService: Error searching blood inventory: $e');
       return [];
     }
   }
@@ -214,8 +247,28 @@ class DataService {
     try {
       return await _dbHelper.getBloodInventorySummary();
     } catch (e) {
-      debugPrint('Error getting blood inventory summary: $e');
+      debugPrint('DataService: Error getting blood inventory summary: $e');
       return {};
+    }
+  }
+
+  // Reserve blood units
+  Future<bool> reserveBloodUnits(String bloodGroup, int quantity) async {
+    try {
+      return await _dbHelper.reserveBloodUnits(bloodGroup, quantity);
+    } catch (e) {
+      debugPrint('DataService: Error reserving blood units: $e');
+      return false;
+    }
+  }
+
+  // Release reserved blood units
+  Future<bool> releaseBloodUnits(String bloodGroup, int quantity) async {
+    try {
+      return await _dbHelper.releaseBloodUnits(bloodGroup, quantity);
+    } catch (e) {
+      debugPrint('DataService: Error releasing blood units: $e');
+      return false;
     }
   }
 
@@ -226,7 +279,7 @@ class DataService {
     try {
       return await _dbHelper.addDonation(donationData);
     } catch (e) {
-      debugPrint('Error adding donation: $e');
+      debugPrint('DataService: Error adding donation: $e');
       return false;
     }
   }
@@ -236,7 +289,7 @@ class DataService {
     try {
       return await _dbHelper.getDonationsByDonor(donorId);
     } catch (e) {
-      debugPrint('Error getting donations by donor: $e');
+      debugPrint('DataService: Error getting donations by donor: $e');
       return [];
     }
   }
@@ -248,20 +301,50 @@ class DataService {
     try {
       return await _dbHelper.addBloodRequest(requestData);
     } catch (e) {
-      debugPrint('Error adding blood request: $e');
+      debugPrint('DataService: Error adding blood request: $e');
       return false;
     }
   }
 
   // Get requests by requester
   Future<List<Map<String, dynamic>>> getRequestsByRequester(
-    int requesterId,
-  ) async {
+      int requesterId) async {
     try {
       return await _dbHelper.getRequestsByRequester(requesterId);
     } catch (e) {
-      debugPrint('Error getting requests by requester: $e');
+      debugPrint('DataService: Error getting requests by requester: $e');
       return [];
+    }
+  }
+
+  // Approve blood request
+  Future<bool> approveBloodRequest(int requestId, int approvedBy) async {
+    try {
+      return await _dbHelper.approveBloodRequest(requestId, approvedBy);
+    } catch (e) {
+      debugPrint('DataService: Error approving blood request: $e');
+      return false;
+    }
+  }
+
+  // Reject blood request
+  Future<bool> rejectBloodRequest(
+      int requestId, int rejectedBy, String reason) async {
+    try {
+      return await _dbHelper.rejectBloodRequest(requestId, rejectedBy, reason);
+    } catch (e) {
+      debugPrint('DataService: Error rejecting blood request: $e');
+      return false;
+    }
+  }
+
+  // Get blood request by ID
+  Future<Map<String, dynamic>?> getBloodRequestById(int requestId) async {
+    try {
+      return await _dbHelper.getBloodRequestById(requestId);
+    } catch (e) {
+      debugPrint('DataService: Error getting blood request by ID: $e');
+      return null;
     }
   }
 
@@ -272,7 +355,7 @@ class DataService {
     try {
       return await _dbHelper.addNotification(notificationData);
     } catch (e) {
-      debugPrint('Error adding notification: $e');
+      debugPrint('DataService: Error adding notification: $e');
       return false;
     }
   }
@@ -282,7 +365,7 @@ class DataService {
     try {
       return await _dbHelper.getNotificationsByUser(userId);
     } catch (e) {
-      debugPrint('Error getting notifications by user: $e');
+      debugPrint('DataService: Error getting notifications by user: $e');
       return [];
     }
   }
@@ -292,40 +375,126 @@ class DataService {
     try {
       return await _dbHelper.markNotificationAsRead(notificationId);
     } catch (e) {
-      debugPrint('Error marking notification as read: $e');
+      debugPrint('DataService: Error marking notification as read: $e');
       return false;
     }
   }
 
-  // ===== UTILITY METHODS =====
-
-  // Initialize database
-  static Future<void> initializeDatabase() async {
+  // Get unread notifications count
+  Future<int> getUnreadNotificationsCount(int userId) async {
     try {
-      debugPrint('Starting database initialization...');
-      await DatabaseHelper.initializeDatabase();
-      debugPrint('Database initialized successfully');
-
-      // Test database by checking if admin user exists
-      final dbHelper = DatabaseHelper();
-      final adminUser = await dbHelper.getUserByEmail('admin@bloodbank.com');
-      if (adminUser != null) {
-        debugPrint(
-          'Admin user found: ${adminUser['name']} (ID: ${adminUser['id']})',
-        );
-      } else {
-        debugPrint('Admin user not found - checking all users...');
-        final allUsers = await dbHelper.getAllUsers();
-        debugPrint('Total users in database: ${allUsers.length}');
-        for (final user in allUsers) {
-          debugPrint(
-            'User: ${user['name']} (${user['email']}) - ID: ${user['id']}',
-          );
-        }
-      }
+      return await _dbHelper.getUnreadNotificationsCount(userId);
     } catch (e) {
-      debugPrint('Error initializing database: $e');
-      rethrow;
+      debugPrint('DataService: Error getting unread notifications count: $e');
+      return 0;
+    }
+  }
+
+  // Clear all notifications for user
+  Future<bool> clearNotificationsForUser(int userId) async {
+    try {
+      return await _dbHelper.clearNotificationsForUser(userId);
+    } catch (e) {
+      debugPrint('DataService: Error clearing notifications for user: $e');
+      return false;
+    }
+  }
+
+  // ===== USER SESSION OPERATIONS =====
+
+  // Create user session
+  Future<bool> createUserSession(
+      int userId, String sessionToken, String deviceInfo) async {
+    try {
+      return await _dbHelper.createUserSession(
+          userId, sessionToken, deviceInfo);
+    } catch (e) {
+      debugPrint('DataService: Error creating user session: $e');
+      return false;
+    }
+  }
+
+  // Update session activity
+  Future<bool> updateSessionActivity(int userId) async {
+    try {
+      return await _dbHelper.updateSessionActivity(userId);
+    } catch (e) {
+      debugPrint('DataService: Error updating session activity: $e');
+      return false;
+    }
+  }
+
+  // Invalidate user session
+  Future<bool> invalidateUserSession(int userId) async {
+    try {
+      return await _dbHelper.invalidateUserSession(userId);
+    } catch (e) {
+      debugPrint('DataService: Error invalidating user session: $e');
+      return false;
+    }
+  }
+
+  // Get user session
+  Future<Map<String, dynamic>?> getUserSession(int userId) async {
+    try {
+      return await _dbHelper.getUserSession(userId);
+    } catch (e) {
+      debugPrint('DataService: Error getting user session: $e');
+      return null;
+    }
+  }
+
+  // ===== AUDIT LOG OPERATIONS =====
+
+  // Get audit log
+  Future<List<Map<String, dynamic>>> getAuditLog({
+    int? userId,
+    String? action,
+    String? tableName,
+    int? limit,
+  }) async {
+    try {
+      return await _dbHelper.getAuditLog(
+        userId: userId,
+        action: action,
+        tableName: tableName,
+        limit: limit,
+      );
+    } catch (e) {
+      debugPrint('DataService: Error getting audit log: $e');
+      return [];
+    }
+  }
+
+  // ===== STATISTICS AND ANALYTICS =====
+
+  // Get dashboard statistics
+  Future<Map<String, dynamic>> getDashboardStatistics() async {
+    try {
+      return await _dbHelper.getDashboardStatistics();
+    } catch (e) {
+      debugPrint('DataService: Error getting dashboard statistics: $e');
+      return {};
+    }
+  }
+
+  // Get blood inventory statistics
+  Future<Map<String, dynamic>> getBloodInventoryStatistics() async {
+    try {
+      return await _dbHelper.getBloodInventoryStatistics();
+    } catch (e) {
+      debugPrint('DataService: Error getting blood inventory statistics: $e');
+      return {};
+    }
+  }
+
+  // Get user activity statistics
+  Future<Map<String, dynamic>> getUserActivityStatistics() async {
+    try {
+      return await _dbHelper.getUserActivityStatistics();
+    } catch (e) {
+      debugPrint('DataService: Error getting user activity statistics: $e');
+      return {};
     }
   }
 
@@ -333,99 +502,32 @@ class DataService {
   Future<void> close() async {
     try {
       await _dbHelper.close();
-      debugPrint('Database closed successfully');
+      debugPrint('DataService: Database closed successfully');
     } catch (e) {
-      debugPrint('Error closing database: $e');
+      debugPrint('DataService: Error closing database: $e');
     }
   }
 
-  // Get database statistics
-  Future<Map<String, dynamic>> getDatabaseStats() async {
+  // Test database connectivity
+  Future<Map<String, dynamic>> testDatabaseConnectivity() async {
     try {
+      // Test basic database operations
       final users = await getAllUsers();
-      final inventory = await getAllBloodInventory();
-
+      final bloodInventory = await getAllBloodInventory();
+      
       return {
-        'totalUsers': users.length,
-        'totalInventory': inventory.length,
-        'adminUsers': users.where((u) => u.isAdmin).length,
-        'donorUsers': users.where((u) => u.isDonor).length,
-        'receiverUsers': users.where((u) => u.isReceiver).length,
-        'availableBloodGroups': inventory.where((i) => i.isAvailable).length,
-        'lowStockGroups': inventory.where((i) => i.isLow).length,
-        'criticalStockGroups': inventory.where((i) => i.isCritical).length,
+        'status': 'success',
+        'users': users.length,
+        'bloodInventory': bloodInventory.length,
+        'message': 'Database connection successful',
       };
     } catch (e) {
-      debugPrint('Error getting database stats: $e');
-      return {};
-    }
-  }
-
-  // Validate user data
-  static bool validateUserData(Map<String, dynamic> userData) {
-    try {
-      final name = userData['name']?.toString() ?? '';
-      final email = userData['email']?.toString() ?? '';
-      final password = userData['password']?.toString() ?? '';
-      final userType = userData['userType']?.toString() ?? '';
-
-      if (name.isEmpty ||
-          email.isEmpty ||
-          password.isEmpty ||
-          userType.isEmpty) {
-        return false;
-      }
-
-      // Basic email validation
-      if (!email.contains('@') || !email.contains('.')) {
-        return false;
-      }
-
-      // Password length validation
-      if (password.length < 6) {
-        return false;
-      }
-
-      return true;
-    } catch (e) {
-      debugPrint('Error validating user data: $e');
-      return false;
-    }
-  }
-
-  // Validate blood inventory data
-  static bool validateBloodInventoryData(Map<String, dynamic> inventoryData) {
-    try {
-      final bloodGroup = inventoryData['bloodGroup']?.toString() ?? '';
-      final quantity = inventoryData['quantity'];
-
-      if (bloodGroup.isEmpty) {
-        return false;
-      }
-
-      if (quantity == null || quantity is! int || quantity < 0) {
-        return false;
-      }
-
-      // Validate blood group format
-      final validBloodGroups = [
-        'A+',
-        'A-',
-        'B+',
-        'B-',
-        'AB+',
-        'AB-',
-        'O+',
-        'O-',
-      ];
-      if (!validBloodGroups.contains(bloodGroup)) {
-        return false;
-      }
-
-      return true;
-    } catch (e) {
-      debugPrint('Error validating blood inventory data: $e');
-      return false;
+      debugPrint('DataService: Error testing database connectivity: $e');
+      return {
+        'status': 'error',
+        'error': e.toString(),
+        'message': 'Database connection failed',
+      };
     }
   }
 }

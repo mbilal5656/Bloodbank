@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'db_helper.dart';
-import 'theme/app_theme.dart';
+import 'services/data_service.dart';
+
 
 class BloodInventoryPage extends StatefulWidget {
   const BloodInventoryPage({super.key});
@@ -10,250 +10,82 @@ class BloodInventoryPage extends StatefulWidget {
 }
 
 class _BloodInventoryPageState extends State<BloodInventoryPage> {
-  List<Map<String, dynamic>> _inventory = [];
-  List<Map<String, dynamic>> _filteredInventory = [];
+  Map<String, int> _bloodInventory = {};
   bool _isLoading = true;
-  final _searchController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  final _bloodGroupController = TextEditingController();
-  final _quantityController = TextEditingController();
-  bool _showAddForm = false;
-  Map<String, dynamic>? _editingItem;
 
   @override
   void initState() {
     super.initState();
-    _loadInventory();
+    _loadBloodInventory();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _bloodGroupController.dispose();
-    _quantityController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadInventory() async {
+  Future<void> _loadBloodInventory() async {
     try {
-      final inventory = await DatabaseHelper().getAllBloodInventory();
+      debugPrint('🩸 Blood inventory page: Loading inventory data...');
+      final dataService = DataService();
+      final inventory = await dataService.getBloodInventorySummary();
+
+      if (inventory.isNotEmpty) {
+        debugPrint('✅ Blood inventory loaded: ${inventory.length} items');
+        setState(() {
+          _bloodInventory = inventory;
+          _isLoading = false;
+        });
+      } else {
+        debugPrint('⚠️ No blood inventory data found');
+        setState(() {
+          _bloodInventory = {};
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading blood inventory: $e');
       setState(() {
-        _inventory = inventory;
-        _filteredInventory = inventory;
+        _bloodInventory = {};
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading inventory: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
     }
   }
 
-  void _filterInventory(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredInventory = _inventory;
-      } else {
-        _filteredInventory = _inventory.where((item) {
-          final bloodGroup = item['bloodGroup'].toString().toLowerCase();
-          final status = item['status'].toString().toLowerCase();
-          final queryLower = query.toLowerCase();
-
-          return bloodGroup.contains(queryLower) ||
-              status.contains(queryLower) ||
-              item['quantity'].toString().contains(queryLower);
-        }).toList();
-      }
-    });
-  }
-
-  Future<void> _addInventory() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    try {
-      final success = await DatabaseHelper().addBloodInventory({
-        'bloodGroup': _bloodGroupController.text.trim(),
-        'quantity': int.tryParse(_quantityController.text) ?? 0,
-      });
-
-      if (success) {
-        _clearForm();
-        await _loadInventory();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Blood group ${_bloodGroupController.text} added successfully!',
-              ),
-              backgroundColor: AppTheme.successColor,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Blood group already exists'),
-              backgroundColor: AppTheme.errorColor,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error adding inventory: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
+  Color _getBloodGroupColor(String bloodGroup) {
+    switch (bloodGroup) {
+      case 'A+':
+        return Colors.red[700]!;
+      case 'A-':
+        return Colors.red[500]!;
+      case 'B+':
+        return Colors.orange[700]!;
+      case 'B-':
+        return Colors.orange[500]!;
+      case 'AB+':
+        return Colors.purple[700]!;
+      case 'AB-':
+        return Colors.purple[500]!;
+      case 'O+':
+        return Colors.red[900]!;
+      case 'O-':
+        return Colors.red[300]!;
+      default:
+        return Colors.grey;
     }
   }
 
-  Future<void> _updateInventory() async {
-    if (!_formKey.currentState!.validate() || _editingItem == null) return;
-
-    try {
-      final success = await DatabaseHelper()
-          .updateBloodInventory(_editingItem!['id'], {
-            'quantity': int.tryParse(_quantityController.text) ?? 0,
-            'status': (int.tryParse(_quantityController.text) ?? 0) > 0
-                ? 'Available'
-                : 'Out of Stock',
-          });
-
-      if (success) {
-        _clearForm();
-        await _loadInventory();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Blood group ${_editingItem!['bloodGroup']} updated successfully!',
-              ),
-              backgroundColor: AppTheme.successColor,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error updating inventory'),
-              backgroundColor: AppTheme.errorColor,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating inventory: ${e.toString()}'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _deleteInventory(int inventoryId, String bloodGroup) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: Text(
-          'Are you sure you want to delete blood group $bloodGroup?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      try {
-        final success = await DatabaseHelper().deleteBloodInventory(
-          inventoryId,
-        );
-        if (success) {
-          await _loadInventory();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Blood group $bloodGroup deleted successfully!'),
-                backgroundColor: AppTheme.successColor,
-              ),
-            );
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Error deleting inventory'),
-                backgroundColor: AppTheme.errorColor,
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting inventory: ${e.toString()}'),
-              backgroundColor: AppTheme.errorColor,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  void _editInventory(Map<String, dynamic> item) {
-    setState(() {
-      _editingItem = item;
-      _bloodGroupController.text = item['bloodGroup'];
-      _quantityController.text = item['quantity'].toString();
-      _showAddForm = true;
-    });
-  }
-
-  void _clearForm() {
-    setState(() {
-      _editingItem = null;
-      _bloodGroupController.clear();
-      _quantityController.clear();
-      _showAddForm = false;
-    });
+  String _getAvailabilityStatus(int units) {
+    if (units == 0) return 'Out of Stock';
+    if (units < 5) return 'Low Stock';
+    return 'Available';
   }
 
   Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'available':
-        return AppTheme.successColor;
-      case 'out of stock':
-        return AppTheme.errorColor;
-      case 'low':
-        return AppTheme.warningColor;
+    switch (status) {
+      case 'Available':
+        return Colors.green;
+      case 'Low Stock':
+        return Colors.orange;
+      case 'Out of Stock':
+        return Colors.red;
       default:
-        return AppTheme.secondaryColor;
+        return Colors.grey;
     }
   }
 
@@ -261,319 +93,324 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Blood Inventory Management'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: AppTheme.lightTextColor,
+        title: const Text('Blood Inventory'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadBloodInventory,
+            tooltip: 'Refresh',
+          ),
+
+        ],
       ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: AppTheme.primaryGradientDecoration,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1A237E), Color(0xFF3949AB)],
+          ),
+        ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Column(
-              children: [
-                // Search Bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _filterInventory,
-                    decoration: InputDecoration(
-                      hintText: 'Search blood groups, status, or quantity...',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: AppTheme.cardColor,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Add Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _showAddForm = !_showAddForm;
-                              if (!_showAddForm) _clearForm();
-                            });
-                          },
-                          icon: Icon(_showAddForm ? Icons.close : Icons.add),
-                          label: Text(
-                            _showAddForm ? 'Cancel' : 'Add Blood Group',
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.secondaryColor,
-                            foregroundColor: AppTheme.lightTextColor,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
+                      _buildHeader(),
+                      const SizedBox(height: 32),
+                      _buildInventoryGrid(),
+                      const SizedBox(height: 32),
+                      _buildStatistics(),
                     ],
                   ),
                 ),
+        ),
+      ),
+    );
+  }
 
-                const SizedBox(height: 16),
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.bloodtype,
+            size: 40,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Blood Inventory',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Current blood stock levels and availability',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
 
-                // Add/Edit Form
-                if (_showAddForm)
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                    padding: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _editingItem == null
-                                ? 'Add New Blood Group'
-                                : 'Edit Blood Group',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryColor,
-                                ),
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _bloodGroupController,
-                            enabled: _editingItem == null,
-                            decoration: const InputDecoration(
-                              labelText: 'Blood Group',
-                              prefixIcon: Icon(Icons.bloodtype),
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter blood group';
-                              }
-                              if (!RegExp(
-                                r'^[ABO][+-]$',
-                              ).hasMatch(value.toUpperCase())) {
-                                return 'Please enter a valid blood group (A+, A-, B+, B-, AB+, AB-, O+, O-)';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _quantityController,
-                            decoration: const InputDecoration(
-                              labelText: 'Quantity',
-                              prefixIcon: Icon(Icons.inventory),
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter quantity';
-                              }
-                              final quantity = int.tryParse(value);
-                              if (quantity == null || quantity < 0) {
-                                return 'Please enter a valid positive number';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: _editingItem == null
-                                      ? _addInventory
-                                      : _updateInventory,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryColor,
-                                    foregroundColor: AppTheme.lightTextColor,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    _editingItem == null ? 'Add' : 'Update',
-                                  ),
-                                ),
-                              ),
-                              if (_editingItem != null) ...[
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: _clearForm,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.warningColor,
-                                      foregroundColor: AppTheme.lightTextColor,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                    ),
-                                    child: const Text('Cancel'),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+  Widget _buildInventoryGrid() {
+    final bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Blood Group Availability',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.2,
+            ),
+            itemCount: bloodGroups.length,
+            itemBuilder: (context, index) {
+              final bloodGroup = bloodGroups[index];
+              final units = _bloodInventory[bloodGroup] ?? 0;
+              final status = _getAvailabilityStatus(units);
+
+              return _buildBloodGroupCard(
+                bloodGroup: bloodGroup,
+                units: units,
+                status: status,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBloodGroupCard({
+    required String bloodGroup,
+    required int units,
+    required String status,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _getBloodGroupColor(bloodGroup).withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: _getBloodGroupColor(bloodGroup).withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  bloodGroup,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _getBloodGroupColor(bloodGroup),
                   ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '$units Units',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getStatusColor(status).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _getStatusColor(status),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  color: _getStatusColor(status),
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                const SizedBox(height: 16),
+  Widget _buildStatistics() {
+    final totalUnits =
+        _bloodInventory.values.fold(0, (sum, units) => sum + units);
+    final availableGroups =
+        _bloodInventory.values.where((units) => units > 0).length;
+    final lowStockGroups =
+        _bloodInventory.values.where((units) => units > 0 && units < 5).length;
+    final outOfStockGroups =
+        _bloodInventory.values.where((units) => units == 0).length;
 
-                // Inventory List
-                if (_isLoading)
-                  const Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (_filteredInventory.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.inventory_2_outlined,
-                            size: 64,
-                            color: AppTheme.lightTextColor.withValues(
-                              alpha: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchController.text.isEmpty
-                                ? 'No blood inventory found'
-                                : 'No results found for "${_searchController.text}"',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: AppTheme.lightTextColor.withValues(
-                                    alpha: 0.7,
-                                  ),
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  ..._filteredInventory.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 4.0,
-                      ),
-                      child: Card(
-                        elevation: 4,
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: AppTheme.primaryColor,
-                            child: Text(
-                              item['bloodGroup'],
-                              style: const TextStyle(
-                                color: AppTheme.lightTextColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            'Blood Group ${item['bloodGroup']}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Quantity: ${item['quantity']} units'),
-                              Text(
-                                'Status: ${item['status']}',
-                                style: TextStyle(
-                                  color: _getStatusColor(item['status']),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Last Updated: ${DateTime.parse(item['lastUpdated']).toString().substring(0, 16)}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (value) {
-                              switch (value) {
-                                case 'edit':
-                                  _editInventory(item);
-                                  break;
-                                case 'delete':
-                                  _deleteInventory(
-                                    item['id'],
-                                    item['bloodGroup'],
-                                  );
-                                  break;
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'edit',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit),
-                                    SizedBox(width: 8),
-                                    Text('Edit'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.delete, color: Colors.red),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Delete',
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Inventory Statistics',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildStatCard(
+            icon: Icons.inventory,
+            title: 'Total Units',
+            value: '$totalUnits',
+            color: Colors.blue,
+          ),
+          const SizedBox(height: 12),
+          _buildStatCard(
+            icon: Icons.check_circle,
+            title: 'Available Groups',
+            value: '$availableGroups/8',
+            color: Colors.green,
+          ),
+          const SizedBox(height: 12),
+          _buildStatCard(
+            icon: Icons.warning,
+            title: 'Low Stock Groups',
+            value: '$lowStockGroups',
+            color: Colors.orange,
+          ),
+          const SizedBox(height: 12),
+          _buildStatCard(
+            icon: Icons.cancel,
+            title: 'Out of Stock',
+            value: '$outOfStockGroups',
+            color: Colors.red,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
                   ),
-
-                const SizedBox(
-                  height: 32,
-                ), // Bottom padding for better scrolling
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }

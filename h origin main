@@ -1,5 +1,0 @@
-[33m9ac0fb4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Implement SQLite database for user data storage with enhanced data models and services
-[33mde5282d[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Update README.md with comprehensive documentation and latest features
-[33me2db7eb[m Fix launch.json syntax error and improve debugging configurations
-[33m6485721[m Fix login and signup button issues - remove Form widgets and improve navigation
-[33m6be6707[m Fix signup and login pages, add admin notification functionality

@@ -7,8 +7,11 @@ class UserModel {
   final String? bloodGroup;
   final int? age;
   final String? contactNumber;
-  final String createdAt;
-  final String updatedAt;
+  final String? address;
+  final bool isActive;
+  final DateTime? lastLogin;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   UserModel({
     this.id,
@@ -19,11 +22,13 @@ class UserModel {
     this.bloodGroup,
     this.age,
     this.contactNumber,
+    this.address,
+    this.isActive = true,
+    this.lastLogin,
     required this.createdAt,
     required this.updatedAt,
   });
 
-  // Create from Map (from database)
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       id: map['id'] as int?,
@@ -34,15 +39,19 @@ class UserModel {
       bloodGroup: map['bloodGroup'] as String?,
       age: map['age'] as int?,
       contactNumber: map['contactNumber'] as String?,
-      createdAt: map['createdAt'] as String,
-      updatedAt: map['updatedAt'] as String,
+      address: map['address'] as String?,
+      isActive: (map['isActive'] as int?) == 1,
+      lastLogin: map['lastLogin'] != null
+          ? DateTime.parse(map['lastLogin'] as String)
+          : null,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      updatedAt: DateTime.parse(map['updatedAt'] as String),
     );
   }
 
-  // Convert to Map (for database)
   Map<String, dynamic> toMap() {
     return {
-      if (id != null) 'id': id,
+      'id': id,
       'name': name,
       'email': email,
       'password': password,
@@ -50,12 +59,14 @@ class UserModel {
       'bloodGroup': bloodGroup,
       'age': age,
       'contactNumber': contactNumber,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
+      'address': address,
+      'isActive': isActive ? 1 : 0,
+      'lastLogin': lastLogin?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
-  // Create a copy with updated fields
   UserModel copyWith({
     int? id,
     String? name,
@@ -65,8 +76,11 @@ class UserModel {
     String? bloodGroup,
     int? age,
     String? contactNumber,
-    String? createdAt,
-    String? updatedAt,
+    String? address,
+    bool? isActive,
+    DateTime? lastLogin,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -77,40 +91,17 @@ class UserModel {
       bloodGroup: bloodGroup ?? this.bloodGroup,
       age: age ?? this.age,
       contactNumber: contactNumber ?? this.contactNumber,
+      address: address ?? this.address,
+      isActive: isActive ?? this.isActive,
+      lastLogin: lastLogin ?? this.lastLogin,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  // Check if user is admin
-  bool get isAdmin => userType == 'Admin';
-
-  // Check if user is donor
-  bool get isDonor => userType == 'Donor';
-
-  // Check if user is receiver
-  bool get isReceiver => userType == 'Receiver';
-
-  // Get display name
-  String get displayName => name.isNotEmpty ? name : email;
-
-  // Get user type display name
-  String get userTypeDisplay {
-    switch (userType) {
-      case 'Admin':
-        return 'Administrator';
-      case 'Donor':
-        return 'Blood Donor';
-      case 'Receiver':
-        return 'Blood Receiver';
-      default:
-        return userType;
-    }
-  }
-
   @override
   String toString() {
-    return 'UserModel(id: $id, name: $name, email: $email, userType: $userType)';
+    return 'UserModel(id: $id, name: $name, email: $email, userType: $userType, isActive: $isActive)';
   }
 
   @override
@@ -121,4 +112,32 @@ class UserModel {
 
   @override
   int get hashCode => id.hashCode;
+
+  // Helper methods
+  bool get isAdmin => userType.toLowerCase() == 'admin';
+  bool get isDonor => userType.toLowerCase() == 'donor';
+  bool get isReceiver => userType.toLowerCase() == 'receiver';
+
+  String get displayName => name.isNotEmpty ? name : email.split('@')[0];
+
+  String get userTypeDisplay {
+    switch (userType.toLowerCase()) {
+      case 'admin':
+        return 'Administrator';
+      case 'donor':
+        return 'Blood Donor';
+      case 'receiver':
+        return 'Blood Receiver';
+      default:
+        return userType;
+    }
+  }
+
+  String get statusText => isActive ? 'Active' : 'Inactive';
+
+  bool get hasBloodGroup => bloodGroup != null && bloodGroup != 'N/A';
+
+  bool get hasContactInfo => contactNumber != null && contactNumber!.isNotEmpty;
+
+  bool get hasAddress => address != null && address!.isNotEmpty;
 }

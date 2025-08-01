@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'notification_helper.dart';
 import 'main.dart' show UserSession, NavigationUtils;
-import 'utils/secure_code_generator.dart';
+import 'services/data_service.dart';
 
 class DonorPage extends StatefulWidget {
   const DonorPage({super.key});
@@ -14,7 +14,6 @@ class _DonorPageState extends State<DonorPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
-  final _bloodGroupController = TextEditingController();
   final _lastDonationController = TextEditingController();
   final _contactController = TextEditingController();
 
@@ -34,7 +33,6 @@ class _DonorPageState extends State<DonorPage> {
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
-    _bloodGroupController.dispose();
     _lastDonationController.dispose();
     _contactController.dispose();
     super.dispose();
@@ -42,18 +40,22 @@ class _DonorPageState extends State<DonorPage> {
 
   Future<void> _loadNotifications() async {
     try {
+      debugPrint('🩸 Donor page: Loading notifications...');
       final notifications = await NotificationHelper.getNotificationsForUser(
-        UserSession.userId,
+        UserSession.userId ?? 0,
       );
       final unreadCount = await NotificationHelper.getUnreadNotificationsCount(
-        UserSession.userId,
+        UserSession.userId ?? 0,
       );
+
+      debugPrint(
+          '✅ Notifications loaded: ${notifications.length} total, $unreadCount unread');
       setState(() {
         _notifications = notifications;
         _unreadNotificationsCount = unreadCount;
       });
     } catch (e) {
-      debugPrint('Error loading notifications: $e');
+      debugPrint('❌ Error loading notifications: $e');
     }
   }
 
@@ -85,9 +87,8 @@ class _DonorPageState extends State<DonorPage> {
                       title: Text(
                         notification['title'] ?? '',
                         style: TextStyle(
-                          fontWeight: isRead
-                              ? FontWeight.normal
-                              : FontWeight.bold,
+                          fontWeight:
+                              isRead ? FontWeight.normal : FontWeight.bold,
                         ),
                       ),
                       subtitle: Text(notification['message'] ?? ''),
@@ -148,35 +149,51 @@ class _DonorPageState extends State<DonorPage> {
     }
   }
 
-  void _checkEligibility() {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _checkEligibility() async {
+    try {
+      debugPrint('🔍 Checking donor eligibility...');
+      final dataService = DataService();
 
-    final age = int.tryParse(_ageController.text) ?? 0;
-    final lastDonation = _lastDonationController.text;
+      // Get user data
+      final user = await dataService.getUserById(UserSession.userId ?? 0);
+      if (user != null) {
+        debugPrint('✅ User data retrieved: ${user['name']}');
 
-    // Basic eligibility check
-    final isAgeValid = age >= 18 && age <= 65;
-    final hasRecentDonation = lastDonation.isNotEmpty;
+        // Check age requirement
+        final age = user['age'] ?? 0;
+        final isAgeEligible = age >= 18 && age <= 65;
 
-    setState(() {
-      _isEligible = isAgeValid && !hasRecentDonation;
-      if (_isEligible) {
-        _donationCode = SecureCodeGenerator.generateDonationCode();
+        // Check last donation (if any)
+        final donations =
+            await dataService.getDonationsByDonor(UserSession.userId ?? 0);
+        final lastDonation = donations.isNotEmpty ? donations.last : null;
+
+        final isEligible = isAgeEligible &&
+            (lastDonation == null ||
+                DateTime.now()
+                        .difference(
+                            DateTime.parse(lastDonation['donationDate']))
+                        .inDays >=
+                    56);
+
+        debugPrint(
+            '📊 Eligibility check: Age=$isAgeEligible, Last donation=${lastDonation != null}');
+
+        setState(() {
+          _isEligible = isEligible;
+        });
       } else {
-        _donationCode = null;
+        debugPrint('❌ User data not found');
+        setState(() {
+          _isEligible = false;
+        });
       }
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isEligible
-              ? 'You are eligible to donate blood!'
-              : 'You are not eligible to donate blood.',
-        ),
-        backgroundColor: _isEligible ? Colors.green : Colors.red,
-      ),
-    );
+    } catch (e) {
+      debugPrint('❌ Error checking eligibility: $e');
+      setState(() {
+        _isEligible = false;
+      });
+    }
   }
 
   void _submitDonation() {
@@ -190,7 +207,6 @@ class _DonorPageState extends State<DonorPage> {
       return;
     }
 
-    // Here you would typically submit the donation to the backend
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Donation submitted with code: $_donationCode'),
@@ -211,8 +227,6 @@ class _DonorPageState extends State<DonorPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Donor Portal'),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.home),
@@ -229,41 +243,10 @@ class _DonorPageState extends State<DonorPage> {
             onPressed: () => NavigationUtils.navigateToSettings(context),
             tooltip: 'Settings',
           ),
-          Stack(
-            children: [
-              IconButton(
-                onPressed: _showNotificationsDialog,
-                icon: const Icon(Icons.notifications),
-                tooltip: 'Notifications',
-              ),
-              if (_unreadNotificationsCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 12,
-                      minHeight: 12,
-                    ),
-                    child: Text(
-                      '$_unreadNotificationsCount',
-                      style: const TextStyle(color: Colors.white, fontSize: 8),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          _buildNotificationButton(),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await NavigationUtils.logout(context);
-            },
+            onPressed: () async => await NavigationUtils.logout(context),
             tooltip: 'Logout',
           ),
         ],
@@ -284,278 +267,286 @@ class _DonorPageState extends State<DonorPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Blood Donation Eligibility',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                color: const Color(0xFF1A237E),
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 16),
-                        Form(
-                          key: _formKey,
-                          child: Column(
-                            children: [
-                              TextFormField(
-                                controller: _nameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Full Name',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.person),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _ageController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Age',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.calendar_today),
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your age';
-                                  }
-                                  final age = int.tryParse(value);
-                                  if (age == null || age < 18 || age > 65) {
-                                    return 'Age must be between 18 and 65';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<String>(
-                                value: _selectedBloodGroup,
-                                decoration: const InputDecoration(
-                                  labelText: 'Blood Group',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.bloodtype),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'A+',
-                                    child: Text('A+'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'A-',
-                                    child: Text('A-'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'B+',
-                                    child: Text('B+'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'B-',
-                                    child: Text('B-'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'AB+',
-                                    child: Text('AB+'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'AB-',
-                                    child: Text('AB-'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'O+',
-                                    child: Text('O+'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'O-',
-                                    child: Text('O-'),
-                                  ),
-                                ],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedBloodGroup = value!;
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please select blood group';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _lastDonationController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Last Donation Date (if any)',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.date_range),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _contactController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Contact Number',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.phone),
-                                ),
-                                keyboardType: TextInputType.phone,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter contact number';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 24),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: _checkEligibility,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF1A237E,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      child: const Text('Check Eligibility'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: _isEligible
-                                          ? _submitDonation
-                                          : null,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      child: const Text('Submit Donation'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _buildEligibilityForm(),
                 if (_isEligible && _donationCode != null) ...[
                   const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Donation Code',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.green[50],
-                              border: Border.all(color: Colors.green),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.qr_code, color: Colors.green),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _donationCode!,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Please present this code at the donation center.',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildDonationCodeCard(),
                 ],
                 const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Donation Guidelines',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                color: const Color(0xFF1A237E),
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildGuideline(
-                          Icons.check_circle,
-                          'Must be 18-65 years old',
-                          Colors.green,
-                        ),
-                        _buildGuideline(
-                          Icons.check_circle,
-                          'No recent donations (3 months)',
-                          Colors.green,
-                        ),
-                        _buildGuideline(
-                          Icons.check_circle,
-                          'Good health condition',
-                          Colors.green,
-                        ),
-                        _buildGuideline(
-                          Icons.check_circle,
-                          'Valid ID required',
-                          Colors.green,
-                        ),
-                        _buildGuideline(
-                          Icons.check_circle,
-                          'Fasting not required',
-                          Colors.green,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _buildGuidelinesCard(),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationButton() {
+    return Stack(
+      children: [
+        IconButton(
+          onPressed: _showNotificationsDialog,
+          icon: const Icon(Icons.notifications),
+          tooltip: 'Notifications',
+        ),
+        if (_unreadNotificationsCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 12,
+                minHeight: 12,
+              ),
+              child: Text(
+                '$_unreadNotificationsCount',
+                style: const TextStyle(color: Colors.white, fontSize: 8),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildEligibilityForm() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Blood Donation Eligibility',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: const Color(0xFF1A237E),
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Full Name',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your name';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _ageController,
+                    decoration: const InputDecoration(
+                      labelText: 'Age',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.calendar_today),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your age';
+                      }
+                      final age = int.tryParse(value);
+                      if (age == null || age < 18 || age > 65) {
+                        return 'Age must be between 18 and 65';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _selectedBloodGroup,
+                    decoration: const InputDecoration(
+                      labelText: 'Blood Group',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.bloodtype),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'A+', child: Text('A+')),
+                      DropdownMenuItem(value: 'A-', child: Text('A-')),
+                      DropdownMenuItem(value: 'B+', child: Text('B+')),
+                      DropdownMenuItem(value: 'B-', child: Text('B-')),
+                      DropdownMenuItem(value: 'AB+', child: Text('AB+')),
+                      DropdownMenuItem(value: 'AB-', child: Text('AB-')),
+                      DropdownMenuItem(value: 'O+', child: Text('O+')),
+                      DropdownMenuItem(value: 'O-', child: Text('O-')),
+                    ],
+                    onChanged: (value) {
+                      setState(() => _selectedBloodGroup = value!);
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select blood group';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _lastDonationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Last Donation Date (if any)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.date_range),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _contactController,
+                    decoration: const InputDecoration(
+                      labelText: 'Contact Number',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.phone),
+                    ),
+                    keyboardType: TextInputType.phone,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter contact number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _checkEligibility,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1A237E),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Check Eligibility'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isEligible ? _submitDonation : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Submit Donation'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDonationCodeCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Donation Code',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                border: Border.all(color: Colors.green),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.qr_code, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Text(
+                    _donationCode!,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Please present this code at the donation center.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuidelinesCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Donation Guidelines',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: const Color(0xFF1A237E),
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            _buildGuideline(
+              Icons.check_circle,
+              'Must be 18-65 years old',
+              Colors.green,
+            ),
+            _buildGuideline(
+              Icons.check_circle,
+              'No recent donations (3 months)',
+              Colors.green,
+            ),
+            _buildGuideline(
+              Icons.check_circle,
+              'Good health condition',
+              Colors.green,
+            ),
+            _buildGuideline(
+              Icons.check_circle,
+              'Valid ID required',
+              Colors.green,
+            ),
+            _buildGuideline(
+              Icons.check_circle,
+              'Fasting not required',
+              Colors.green,
+            ),
+          ],
         ),
       ),
     );

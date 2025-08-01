@@ -1,45 +1,62 @@
 import 'package:flutter/material.dart';
+import 'main.dart' show UserSession, NavigationUtils;
 import 'services/data_service.dart';
-import 'models/user_model.dart';
-import 'theme/app_theme.dart';
+import 'session_manager.dart';
+import 'db_helper.dart';
+
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
+
   @override
   State<SignupPage> createState() => _SignupPageState();
 }
 
 class _SignupPageState extends State<SignupPage> {
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _bloodGroupController = TextEditingController();
   final _ageController = TextEditingController();
   final _contactController = TextEditingController();
   final _addressController = TextEditingController();
-  final _emergencyContactController = TextEditingController();
-  final _medicalHistoryController = TextEditingController();
-  final _occupationController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _heightController = TextEditingController();
-  final _lastDonationController = TextEditingController();
-  final _allergiesController = TextEditingController();
-  final _medicationsController = TextEditingController();
-  final _emergencyNameController = TextEditingController();
-  final _emergencyRelationController = TextEditingController();
-  
-  String _userType = 'Donor';
-  String _selectedBloodGroup = 'A+';
-  String _gender = 'Male';
-  String _maritalStatus = 'Single';
-  String _occupation = 'Student';
-  DateTime? _dateOfBirth;
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _hasMedicalConditions = false;
-  bool _isRegularDonor = false;
+  String _selectedUserType = 'Donor';
+  String _selectedBloodGroup = 'A+';
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeDatabase();
+  }
+
+  Future<void> _initializeDatabase() async {
+    try {
+      debugPrint('🔧 Initializing database for signup page...');
+      await DatabaseHelper.initializeDatabase();
+      debugPrint('✅ Database initialized successfully');
+      
+      // Test database connectivity
+      await _testDatabaseConnectivity();
+    } catch (e) {
+      debugPrint('❌ Database initialization failed: $e');
+    }
+  }
+
+  Future<void> _testDatabaseConnectivity() async {
+    try {
+      debugPrint('🔍 Testing database connectivity...');
+      final dataService = DataService();
+      final users = await dataService.getAllUsers();
+      debugPrint('✅ Database connectivity test passed. Total users: ${users.length}');
+    } catch (e) {
+      debugPrint('❌ Database connectivity test failed: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -47,240 +64,151 @@ class _SignupPageState extends State<SignupPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _bloodGroupController.dispose();
     _ageController.dispose();
     _contactController.dispose();
     _addressController.dispose();
-    _emergencyContactController.dispose();
-    _medicalHistoryController.dispose();
-    _occupationController.dispose();
-    _weightController.dispose();
-    _heightController.dispose();
-    _lastDonationController.dispose();
-    _allergiesController.dispose();
-    _medicationsController.dispose();
-    _emergencyNameController.dispose();
-    _emergencyRelationController.dispose();
     super.dispose();
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: AppTheme.lightTextColor,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _selectDateOfBirth() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 6570)), // 18 years ago
-      firstDate: DateTime.now().subtract(const Duration(days: 36500)), // 100 years ago
-      lastDate: DateTime.now().subtract(const Duration(days: 6570)), // 18 years ago
-    );
-    if (picked != null && picked != _dateOfBirth) {
-      setState(() {
-        _dateOfBirth = picked;
-        // Calculate age from date of birth
-        final age = DateTime.now().year - picked.year;
-        _ageController.text = age.toString();
-      });
-    }
-  }
-
-  Future<void> _selectLastDonationDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 3650)), // 10 years ago
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _lastDonationController.text = "${picked.day}/${picked.month}/${picked.year}";
-      });
-    }
-  }
-
   Future<void> _signup() async {
-    debugPrint('Signup button pressed');
-    debugPrint('Name: ${_nameController.text}');
-    debugPrint('Email: ${_emailController.text}');
-    debugPrint('Password: ${_passwordController.text}');
-    debugPrint('User Type: $_userType');
-    debugPrint('Blood Group: $_selectedBloodGroup');
-    debugPrint('Age: ${_ageController.text}');
-    debugPrint('Contact: ${_contactController.text}');
-    debugPrint('Gender: $_gender');
-    debugPrint('Marital Status: $_maritalStatus');
-    debugPrint('Occupation: $_occupation');
-    debugPrint('Date of Birth: $_dateOfBirth');
-    debugPrint('Weight: ${_weightController.text}');
-    debugPrint('Height: ${_heightController.text}');
-    debugPrint('Last Donation: ${_lastDonationController.text}');
-    debugPrint('Medical Conditions: $_hasMedicalConditions');
-    debugPrint('Regular Donor: $_isRegularDonor');
+    debugPrint('🔧 Signup button pressed');
+    debugPrint('📝 Form validation starting...');
 
-    if (!mounted) return;
-
-    // Enhanced validation
-    if (_nameController.text.isEmpty ||
-        _emailController.text.isEmpty ||
-        _passwordController.text.isEmpty ||
-        _confirmPasswordController.text.isEmpty ||
-        _ageController.text.isEmpty ||
-        (_userType != 'Admin' && _contactController.text.isEmpty)) {
-      debugPrint('Validation failed: Missing required fields');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please fill all required fields'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('❌ Form validation failed');
       return;
     }
 
-    // Password confirmation validation
-    if (_passwordController.text != _confirmPasswordController.text) {
-      debugPrint('Validation failed: Passwords do not match');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Passwords do not match'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
-    }
+    debugPrint('✅ Form validation passed');
+    debugPrint('📝 Form data:');
+    debugPrint('  Name: ${_nameController.text.trim()}');
+    debugPrint('  Email: ${_emailController.text.trim()}');
+    debugPrint('  User Type: $_selectedUserType');
+    debugPrint('  Blood Group: $_selectedBloodGroup');
+    debugPrint('  Age: ${_ageController.text}');
+    debugPrint('  Contact: ${_contactController.text.trim()}');
+    debugPrint('  Address: ${_addressController.text.trim()}');
 
-    // Age validation
-    final age = int.tryParse(_ageController.text);
-    if (age == null || age < 18 || age > 65) {
-      debugPrint('Validation failed: Invalid age');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Age must be between 18 and 65'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
-    }
-
-    // Weight validation (if provided)
-    if (_weightController.text.isNotEmpty) {
-      final weight = double.tryParse(_weightController.text);
-      if (weight == null || weight < 30 || weight > 200) {
-        debugPrint('Validation failed: Invalid weight');
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Weight must be between 30 and 200 kg'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-        return;
-      }
-    }
-
-    debugPrint('Validation passed, starting signup process');
-
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      debugPrint('Creating DataService instance');
+      debugPrint('🔧 Starting signup process...');
+      
+      // Ensure database is initialized
+      await DatabaseHelper.initializeDatabase();
+      
       final dataService = DataService();
-      debugPrint('Checking if email already exists...');
+
       // Check if email already exists
-      final existingUser = await dataService.getUserByEmail(
-        _emailController.text.trim(),
-      );
-
-      if (!mounted) return;
-
+      debugPrint(
+          '🔍 Checking if email exists: ${_emailController.text.trim()}');
+      final existingUser =
+          await dataService.getUserByEmail(_emailController.text.trim());
       if (existingUser != null) {
-        debugPrint('Email already registered: ${_emailController.text.trim()}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Email already registered'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
+        debugPrint('❌ Email already exists');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Email already registered. Please use a different email or login.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
         return;
       }
 
-      debugPrint('Email is available, creating new user...');
+      debugPrint('✅ Email is available, creating new user...');
 
-      // Create new user with enhanced data
-      debugPrint('Creating UserModel instance...');
-      final now = DateTime.now().toIso8601String();
-      final newUser = UserModel(
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        userType: _userType,
-        bloodGroup: _selectedBloodGroup,
-        age: int.tryParse(_ageController.text) ?? 0,
-        contactNumber: _userType == 'Admin'
-            ? 'N/A'
-            : _contactController.text.trim(),
-        createdAt: now,
-        updatedAt: now,
-      );
+      // Create new user
+      final newUser = {
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text,
+        'userType': _selectedUserType,
+        'bloodGroup': _selectedBloodGroup,
+        'age': int.tryParse(_ageController.text) ?? 0,
+        'contactNumber': _contactController.text.trim(),
+        'address': _addressController.text.trim(),
+      };
 
-      debugPrint('UserModel created: ${newUser.name} (${newUser.email})');
-      debugPrint('Calling dataService.createUser...');
+      debugPrint(
+          '📝 User data prepared: ${newUser['name']} (${newUser['email']})');
+      debugPrint('📝 User type: ${newUser['userType']}');
+      debugPrint('📝 Blood group: ${newUser['bloodGroup']}');
 
-      final success = await dataService.createUser(newUser);
-
-      debugPrint('User creation result: $success');
-
-      if (!mounted) return;
+      final success = await dataService.insertUser(newUser);
 
       if (success) {
-        debugPrint('User created successfully, showing success message');
+        debugPrint('✅ User created successfully');
+        // Get the created user
+        final user =
+            await dataService.getUserByEmail(_emailController.text.trim());
+
+        if (user != null) {
+          debugPrint(
+              '✅ Retrieved created user: ${user['name']} (ID: ${user['id']})');
+          // Store session data
+          await SessionManager.saveUserSession(
+            userId: user['id'] ?? 0,
+            email: user['email'],
+            userType: user['userType'],
+            userName: user['name'],
+          );
+
+          // Update global session
+          UserSession.userId = user['id'] ?? 0;
+          UserSession.email = user['email'];
+          UserSession.userType = user['userType'];
+          UserSession.userName = user['name'];
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Account created successfully! Welcome, ${user['name']}!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            NavigationUtils.navigateToUserPage(context, user['userType']);
+          }
+        } else {
+          debugPrint('❌ Failed to retrieve created user');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    'User created but failed to retrieve. Please try logging in.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      } else {
+        debugPrint('❌ Failed to create user');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to create account. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Signup error: $e');
+      debugPrint('❌ Error details: ${e.toString()}');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Account created successfully! Welcome, ${_nameController.text}!',
-            ),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
-        Navigator.of(context).pushReplacementNamed('/login');
-      } else {
-        debugPrint('User creation failed, showing error message');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to create account. Please try again.'),
-            backgroundColor: AppTheme.errorColor,
+            content: Text('Signup error: ${e.toString()}'),
+            backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      debugPrint('Signup error: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Signup failed: ${e.toString()}'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
     } finally {
-      debugPrint('Signup process completed, setting loading to false');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -288,536 +216,457 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sign Up'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => NavigationUtils.navigateToHome(context),
+        ),
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: AppTheme.primaryGradientDecoration,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1A237E), Color(0xFF3949AB)],
+          ),
+        ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 32.0,
-            ),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // App Logo/Icon
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.cardColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.person_add,
-                    size: 50,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
+                const SizedBox(height: 20),
 
+                // Header
+                _buildHeader(),
+                const SizedBox(height: 30),
+
+                // Signup Form
+                _buildSignupForm(),
                 const SizedBox(height: 24),
 
-                Text(
-                  'Create Account',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.lightTextColor,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  'Join our blood bank community',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.lightTextColor.withValues(alpha: 0.8),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 32),
-
-                // Personal Information Section
-                _buildSectionTitle('Personal Information'),
-                
-                TextFormField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Full Name *',
-                    prefixIcon: const Icon(Icons.person),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                TextFormField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email Address *',
-                    prefixIcon: const Icon(Icons.email),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-                
-                // Date of Birth
-                InkWell(
-                  onTap: _selectDateOfBirth,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardColor,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.grey.shade400),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_today, color: Colors.grey),
-                        const SizedBox(width: 12),
-                        Text(
-                          _dateOfBirth != null
-                              ? '${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}'
-                              : 'Date of Birth *',
-                          style: TextStyle(
-                            color: _dateOfBirth != null ? Colors.black : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Gender Selection
-                DropdownButtonFormField<String>(
-                  value: _gender,
-                  decoration: InputDecoration(
-                    labelText: 'Gender *',
-                    prefixIcon: const Icon(Icons.person_outline),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  items: ['Male', 'Female', 'Other']
-                      .map((gender) => DropdownMenuItem(
-                            value: gender,
-                            child: Text(gender),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _gender = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Marital Status
-                DropdownButtonFormField<String>(
-                  value: _maritalStatus,
-                  decoration: InputDecoration(
-                    labelText: 'Marital Status',
-                    prefixIcon: const Icon(Icons.favorite),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  items: ['Single', 'Married', 'Divorced', 'Widowed']
-                      .map((status) => DropdownMenuItem(
-                            value: status,
-                            child: Text(status),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _maritalStatus = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                TextFormField(
-                  controller: _ageController,
-                  decoration: InputDecoration(
-                    labelText: 'Age * (18-65)',
-                    prefixIcon: const Icon(Icons.cake),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                
-                // Physical Information Section
-                _buildSectionTitle('Physical Information'),
-                
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _weightController,
-                        decoration: InputDecoration(
-                          labelText: 'Weight (kg)',
-                          prefixIcon: const Icon(Icons.monitor_weight),
-                          filled: true,
-                          fillColor: AppTheme.cardColor,
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _heightController,
-                        decoration: InputDecoration(
-                          labelText: 'Height (cm)',
-                          prefixIcon: const Icon(Icons.height),
-                          filled: true,
-                          fillColor: AppTheme.cardColor,
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                
-                // Blood Information Section
-                _buildSectionTitle('Blood Information'),
-                
-                DropdownButtonFormField<String>(
-                  value: _selectedBloodGroup,
-                  decoration: InputDecoration(
-                    labelText: 'Blood Group *',
-                    prefixIcon: const Icon(Icons.bloodtype),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
-                      .map((group) => DropdownMenuItem(
-                            value: group,
-                            child: Text(group),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedBloodGroup = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Last Donation Date (for donors)
-                InkWell(
-                  onTap: _selectLastDonationDate,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardColor,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.grey.shade400),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.history, color: Colors.grey),
-                        const SizedBox(width: 12),
-                        Text(
-                          _lastDonationController.text.isNotEmpty
-                              ? _lastDonationController.text
-                              : 'Last Donation Date (if any)',
-                          style: TextStyle(
-                            color: _lastDonationController.text.isNotEmpty ? Colors.black : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Account Information Section
-                _buildSectionTitle('Account Information'),
-                
-                DropdownButtonFormField<String>(
-                  value: _userType,
-                  decoration: InputDecoration(
-                    labelText: 'User Type *',
-                    prefixIcon: const Icon(Icons.person_outline),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  items: ['Donor', 'Receiver']
-                      .map((type) => DropdownMenuItem(
-                            value: type,
-                            child: Text(type),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _userType = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Occupation
-                DropdownButtonFormField<String>(
-                  value: _occupation,
-                  decoration: InputDecoration(
-                    labelText: 'Occupation',
-                    prefixIcon: const Icon(Icons.work),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  items: ['Student', 'Employee', 'Self-employed', 'Retired', 'Other']
-                      .map((occupation) => DropdownMenuItem(
-                            value: occupation,
-                            child: Text(occupation),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _occupation = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Password *',
-                    prefixIcon: const Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  obscureText: _obscurePassword,
-                ),
-                const SizedBox(height: 16),
-                
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password *',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                    ),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  obscureText: _obscureConfirmPassword,
-                ),
-                const SizedBox(height: 16),
-                
-                // Contact Information Section
-                _buildSectionTitle('Contact Information'),
-                
-                TextFormField(
-                  controller: _contactController,
-                  decoration: InputDecoration(
-                    labelText: 'Contact Number *',
-                    prefixIcon: const Icon(Icons.phone),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 16),
-                
-                TextFormField(
-                  controller: _addressController,
-                  decoration: InputDecoration(
-                    labelText: 'Address',
-                    prefixIcon: const Icon(Icons.location_on),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                
-                // Emergency Contact Information
-                _buildSectionTitle('Emergency Contact'),
-                
-                TextFormField(
-                  controller: _emergencyNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Emergency Contact Name',
-                    prefixIcon: const Icon(Icons.person_add),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _emergencyContactController,
-                        decoration: InputDecoration(
-                          labelText: 'Emergency Contact Number',
-                          prefixIcon: const Icon(Icons.emergency),
-                          filled: true,
-                          fillColor: AppTheme.cardColor,
-                        ),
-                        keyboardType: TextInputType.phone,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _emergencyRelationController,
-                        decoration: InputDecoration(
-                          labelText: 'Relationship',
-                          prefixIcon: const Icon(Icons.family_restroom),
-                          filled: true,
-                          fillColor: AppTheme.cardColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                
-                // Medical Information Section
-                _buildSectionTitle('Medical Information'),
-                
-                // Medical Conditions Checkbox
-                CheckboxListTile(
-                  title: const Text('I have medical conditions'),
-                  value: _hasMedicalConditions,
-                  onChanged: (value) {
-                    setState(() {
-                      _hasMedicalConditions = value ?? false;
-                    });
-                  },
-                  controlAffinity: ListTileControlAffinity.leading,
-                  activeColor: AppTheme.primaryColor,
-                ),
-                
-                // Regular Donor Checkbox
-                CheckboxListTile(
-                  title: const Text('I am a regular blood donor'),
-                  value: _isRegularDonor,
-                  onChanged: (value) {
-                    setState(() {
-                      _isRegularDonor = value ?? false;
-                    });
-                  },
-                  controlAffinity: ListTileControlAffinity.leading,
-                  activeColor: AppTheme.primaryColor,
-                ),
-                
-                const SizedBox(height: 16),
-                
-                TextFormField(
-                  controller: _allergiesController,
-                  decoration: InputDecoration(
-                    labelText: 'Allergies (if any)',
-                    prefixIcon: const Icon(Icons.warning),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                
-                TextFormField(
-                  controller: _medicationsController,
-                  decoration: InputDecoration(
-                    labelText: 'Current Medications (if any)',
-                    prefixIcon: const Icon(Icons.medication),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                
-                TextFormField(
-                  controller: _medicalHistoryController,
-                  decoration: InputDecoration(
-                    labelText: 'Medical History (Optional)',
-                    prefixIcon: const Icon(Icons.medical_services),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _signup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: AppTheme.lightTextColor,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppTheme.lightTextColor,
-                              ),
-                            ),
-                          )
-                        : const Text(
-                            'Sign Up',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/login'),
-                  child: Text(
-                    'Already have an account? Login',
-                    style: TextStyle(
-                      color: AppTheme.lightTextColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                // Additional Actions
+                _buildAdditionalActions(),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.person_add,
+            size: 50,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Create Account',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Join our blood bank community',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSignupForm() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            // Name Field
+            TextFormField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'Full Name',
+                prefixIcon: const Icon(Icons.person, color: Colors.white70),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: Colors.white70),
+              ),
+              style: const TextStyle(color: Colors.white),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your name';
+                }
+                if (value.length < 2) {
+                  return 'Name must be at least 2 characters';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Email Field
+            TextFormField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                prefixIcon: const Icon(Icons.email, color: Colors.white70),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: Colors.white70),
+              ),
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your email';
+                }
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                    .hasMatch(value)) {
+                  return 'Please enter a valid email';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // User Type Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedUserType,
+              decoration: InputDecoration(
+                labelText: 'User Type',
+                prefixIcon: const Icon(Icons.category, color: Colors.white70),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: Colors.white70),
+              ),
+              dropdownColor: const Color(0xFF1A237E),
+              style: const TextStyle(color: Colors.white),
+              items: const [
+                DropdownMenuItem(value: 'Donor', child: Text('Donor')),
+                DropdownMenuItem(value: 'Receiver', child: Text('Receiver')),
+              ],
+              onChanged: (value) {
+                setState(() => _selectedUserType = value!);
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Blood Group Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedBloodGroup,
+              decoration: InputDecoration(
+                labelText: 'Blood Group',
+                prefixIcon: const Icon(Icons.bloodtype, color: Colors.white70),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: Colors.white70),
+              ),
+              dropdownColor: const Color(0xFF1A237E),
+              style: const TextStyle(color: Colors.white),
+              items: const [
+                DropdownMenuItem(value: 'A+', child: Text('A+')),
+                DropdownMenuItem(value: 'A-', child: Text('A-')),
+                DropdownMenuItem(value: 'B+', child: Text('B+')),
+                DropdownMenuItem(value: 'B-', child: Text('B-')),
+                DropdownMenuItem(value: 'AB+', child: Text('AB+')),
+                DropdownMenuItem(value: 'AB-', child: Text('AB-')),
+                DropdownMenuItem(value: 'O+', child: Text('O+')),
+                DropdownMenuItem(value: 'O-', child: Text('O-')),
+              ],
+              onChanged: (value) {
+                setState(() => _selectedBloodGroup = value!);
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Age Field
+            TextFormField(
+              controller: _ageController,
+              decoration: InputDecoration(
+                labelText: 'Age',
+                prefixIcon:
+                    const Icon(Icons.calendar_today, color: Colors.white70),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: Colors.white70),
+              ),
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your age';
+                }
+                final age = int.tryParse(value);
+                if (age == null || age < 1 || age > 120) {
+                  return 'Please enter a valid age';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Contact Field
+            TextFormField(
+              controller: _contactController,
+              decoration: InputDecoration(
+                labelText: 'Contact Number',
+                prefixIcon: const Icon(Icons.phone, color: Colors.white70),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: Colors.white70),
+              ),
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your contact number';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Address Field
+            TextFormField(
+              controller: _addressController,
+              decoration: InputDecoration(
+                labelText: 'Address',
+                prefixIcon:
+                    const Icon(Icons.location_on, color: Colors.white70),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: Colors.white70),
+              ),
+              style: const TextStyle(color: Colors.white),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your address';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Password Field
+            TextFormField(
+              controller: _passwordController,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: const Icon(Icons.lock, color: Colors.white70),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.white70,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscurePassword = !_obscurePassword);
+                  },
+                ),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: Colors.white70),
+              ),
+              style: const TextStyle(color: Colors.white),
+              obscureText: _obscurePassword,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a password';
+                }
+                if (value.length < 6) {
+                  return 'Password must be at least 6 characters';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Confirm Password Field
+            TextFormField(
+              controller: _confirmPasswordController,
+              decoration: InputDecoration(
+                labelText: 'Confirm Password',
+                prefixIcon: const Icon(Icons.lock, color: Colors.white70),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPassword
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Colors.white70,
+                  ),
+                  onPressed: () {
+                    setState(() =>
+                        _obscureConfirmPassword = !_obscureConfirmPassword);
+                  },
+                ),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: Colors.white70),
+              ),
+              style: const TextStyle(color: Colors.white),
+              obscureText: _obscureConfirmPassword,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please confirm your password';
+                }
+                if (value != _passwordController.text) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+
+            // Signup Button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _signup,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF1A237E),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF1A237E),
+                          ),
+                        ),
+                      )
+                    : const Text(
+                        'Sign Up',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdditionalActions() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Already have an account? ',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
+            ),
+            TextButton(
+              onPressed: () => NavigationUtils.navigateToLogin(context),
+              child: const Text(
+                'Login',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+
+
+        const SizedBox(height: 16),
+
+        // Terms and Conditions
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+          ),
+          child: const Column(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: Colors.white70,
+                size: 24,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'By signing up, you agree to our terms and conditions',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
