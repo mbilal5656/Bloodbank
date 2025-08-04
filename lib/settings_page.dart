@@ -101,7 +101,7 @@ class _SettingsPageState extends State<SettingsPage> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1A237E).withValues(alpha: 0.3),
+                color: const Color(0xFF1A237E).withOpacity(0.3),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),

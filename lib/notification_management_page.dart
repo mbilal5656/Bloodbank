@@ -164,7 +164,7 @@ class _NotificationManagementPageState
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -227,7 +227,7 @@ class _NotificationManagementPageState
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -279,13 +279,13 @@ class _NotificationManagementPageState
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isRead
-            ? Colors.white.withValues(alpha: 0.1)
-            : Colors.white.withValues(alpha: 0.2),
+            ? Colors.white.withOpacity(0.1)
+            : Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isRead
-              ? Colors.white.withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.4),
+              ? Colors.white.withOpacity(0.2)
+              : Colors.white.withOpacity(0.4),
           width: isRead ? 1 : 2,
         ),
       ),
@@ -294,7 +294,7 @@ class _NotificationManagementPageState
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: _getNotificationColor(type).withValues(alpha: 0.2),
+            color: _getNotificationColor(type).withOpacity(0.2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -316,7 +316,7 @@ class _NotificationManagementPageState
             Text(
               message,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.8),
+                color: Colors.white.withOpacity(0.8),
                 fontSize: 14,
               ),
             ),
@@ -324,7 +324,7 @@ class _NotificationManagementPageState
             Text(
               _formatTimestamp(timestamp),
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
+                color: Colors.white.withOpacity(0.6),
                 fontSize: 12,
               ),
             ),

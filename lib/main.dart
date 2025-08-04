@@ -110,11 +110,22 @@ class NavigationUtils {
   }
 
   static void navigateToUserPage(BuildContext context, String userType) {
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/user/$userType',
-      (route) => false,
-    );
+    String route;
+    switch (userType.toLowerCase()) {
+      case 'admin':
+        route = '/admin';
+        break;
+      case 'donor':
+        route = '/donor';
+        break;
+      case 'receiver':
+        route = '/receiver';
+        break;
+      default:
+        route = '/home';
+        break;
+    }
+    Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
   }
 
   static void navigateToPage(BuildContext context, String route) {
@@ -138,11 +149,11 @@ class NavigationUtils {
   }
 
   static void navigateToBloodInventory(BuildContext context) {
-    Navigator.pushNamed(context, '/blood_inventory');
+    Navigator.pushNamed(context, '/blood-inventory');
   }
 
   static void navigateToNotificationManagement(BuildContext context) {
-    Navigator.pushNamed(context, '/notifications');
+    Navigator.pushNamed(context, '/notification-management');
   }
 
   static Future<void> logout(BuildContext context) async {
