@@ -68,7 +68,6 @@ class _AdminPageState extends State<AdminPage> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading data: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -97,6 +96,8 @@ class _AdminPageState extends State<AdminPage> {
     }
 
     try {
+      setState(() => _isLoading = true);
+      
       final success = await NotificationHelper.addNotification(
         title: _notificationTitleController.text.trim(),
         message: _notificationMessageController.text.trim(),
@@ -110,7 +111,10 @@ class _AdminPageState extends State<AdminPage> {
         _selectedNotificationType = 'info';
         _selectedTargetUserType = 'all';
 
-        setState(() => _showNotificationForm = false);
+        setState(() {
+          _showNotificationForm = false;
+          _isLoading = false;
+        });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -122,6 +126,7 @@ class _AdminPageState extends State<AdminPage> {
           );
         }
       } else {
+        setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -133,6 +138,7 @@ class _AdminPageState extends State<AdminPage> {
         }
       }
     } catch (e) {
+      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -169,6 +175,7 @@ class _AdminPageState extends State<AdminPage> {
 
     if (confirmed == true) {
       try {
+        setState(() => _isLoading = true);
         final dataService = DataService();
         final success = await dataService.deleteUser(userId);
         if (success) {
@@ -183,6 +190,7 @@ class _AdminPageState extends State<AdminPage> {
             );
           }
         } else {
+          setState(() => _isLoading = false);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -194,6 +202,7 @@ class _AdminPageState extends State<AdminPage> {
           }
         }
       } catch (e) {
+        setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -209,6 +218,7 @@ class _AdminPageState extends State<AdminPage> {
 
   Future<void> _toggleUserStatus(int userId, bool isActive) async {
     try {
+      setState(() => _isLoading = true);
       final dataService = DataService();
       final success = await dataService.updateUser(userId, {
         'isActive': isActive ? 1 : 0,
@@ -226,6 +236,7 @@ class _AdminPageState extends State<AdminPage> {
           );
         }
       } else {
+        setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -237,6 +248,7 @@ class _AdminPageState extends State<AdminPage> {
         }
       }
     } catch (e) {
+      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -253,12 +265,14 @@ class _AdminPageState extends State<AdminPage> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
+      setState(() => _isLoading = true);
       final dataService = DataService();
       final existingUser = await dataService.getUserByEmail(
         _emailController.text.trim(),
       );
 
       if (existingUser != null) {
+        setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -282,30 +296,44 @@ class _AdminPageState extends State<AdminPage> {
         'address': '',
       };
 
-      await dataService.insertUser(newUser);
+      final success = await dataService.insertUser(newUser);
+      
+      if (success) {
+        // Clear form
+        _nameController.clear();
+        _emailController.clear();
+        _passwordController.clear();
+        _bloodGroupController.clear();
+        _ageController.clear();
+        _contactController.clear();
+        _userType = 'Donor';
 
-      // Clear form
-      _nameController.clear();
-      _emailController.clear();
-      _passwordController.clear();
-      _bloodGroupController.clear();
-      _ageController.clear();
-      _contactController.clear();
-      _userType = 'Donor';
+        setState(() => _showAddUserForm = false);
+        await _loadData();
 
-      setState(() => _showAddUserForm = false);
-      await _loadData();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$_userType added successfully!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$_userType added successfully!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to add user'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
+      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -511,6 +539,11 @@ class _AdminPageState extends State<AdminPage> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadData,
+            tooltip: 'Refresh Data',
+          ),
+          IconButton(
             icon: const Icon(Icons.inventory),
             onPressed: () => Navigator.pushNamed(context, '/blood_inventory'),
             tooltip: 'Blood Inventory',
@@ -535,7 +568,6 @@ class _AdminPageState extends State<AdminPage> {
             icon: const Icon(Icons.logout),
             onPressed: () async => await NavigationUtils.logout(context),
           ),
-
         ],
       ),
       floatingActionButton: Column(
