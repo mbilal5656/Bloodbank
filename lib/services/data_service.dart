@@ -12,13 +12,13 @@ class DataService {
   static Future<void> initializeDatabase() async {
     try {
       if (kIsWeb) {
-        debugPrint('DataService: Web platform - skipping SQLite initialization');
+  
         return;
       }
       await DatabaseHelper.initializeDatabase();
-      debugPrint('DataService: Database initialized successfully');
+
     } catch (e) {
-      debugPrint('DataService: Error initializing database: $e');
+
       rethrow;
     }
   }

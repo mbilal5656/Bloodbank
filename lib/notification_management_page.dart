@@ -30,7 +30,7 @@ class _NotificationManagementPageState
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading notifications: $e');
+      
       setState(() => _isLoading = false);
     }
   }
@@ -40,7 +40,7 @@ class _NotificationManagementPageState
       await NotificationHelper.markNotificationAsRead(notificationId);
       await _loadNotifications(); // Reload to update UI
     } catch (e) {
-      debugPrint('Error marking notification as read: $e');
+      // Error marking notification as read
     }
   }
 
@@ -58,7 +58,6 @@ class _NotificationManagementPageState
         );
       }
     } catch (e) {
-      debugPrint('Error marking notification as read: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -106,7 +105,7 @@ class _NotificationManagementPageState
           );
         }
       } catch (e) {
-        debugPrint('Error clearing notifications: $e');
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

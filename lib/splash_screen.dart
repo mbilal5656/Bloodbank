@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'main.dart' show UserSession, NavigationUtils;
 import 'session_manager.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'utils/database_verification.dart';
+import 'db_helper.dart';
+
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    debugPrint('Splash screen: Initializing...');
+
 
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -49,7 +50,7 @@ class _SplashScreenState extends State<SplashScreen>
       curve: Curves.easeIn,
     ));
 
-    debugPrint('Splash screen: Starting animation...');
+    
     _startAnimation();
   }
 
@@ -108,22 +109,15 @@ class _SplashScreenState extends State<SplashScreen>
     if (_isDisposed) return 'timeout';
 
     try {
-      debugPrint('Splash screen: Checking user session...');
 
-      // Initialize and verify database
+
+      // Initialize database
       try {
         if (!kIsWeb) {
-          debugPrint('🔍 Verifying database connection...');
-          final verificationResult = await DatabaseVerification.verifyDatabaseConnection();
-          
-          if (verificationResult['status'] == 'success') {
-            debugPrint('✅ Database verification successful: ${verificationResult['message']}');
-          } else {
-            debugPrint('⚠️ Database verification failed: ${verificationResult['error']}');
-          }
+          await DatabaseHelper.initializeDatabase();
         }
       } catch (e) {
-        debugPrint('⚠️ Database initialization failed, continuing anyway: $e');
+        // Database initialization failed, continuing anyway
       }
 
       final sessionData = await SessionManager.getSessionData();
@@ -131,13 +125,13 @@ class _SplashScreenState extends State<SplashScreen>
           'Splash screen: Session data received: ${sessionData.isNotEmpty}');
 
       if (_isDisposed || !mounted) {
-        debugPrint('Splash screen: Widget not mounted, returning');
+
         return 'timeout';
       }
 
       if (sessionData.isNotEmpty && sessionData['userType'] != null) {
         // User is logged in, navigate to appropriate page
-        debugPrint('Splash screen: User is logged in, navigating to user page');
+
         UserSession.userId = sessionData['userId'] ?? 0;
         UserSession.email = sessionData['email'] ?? '';
         UserSession.userType = sessionData['userType'] ?? '';

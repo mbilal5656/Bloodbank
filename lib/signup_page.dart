@@ -36,25 +36,25 @@ class _SignupPageState extends State<SignupPage> {
 
   Future<void> _initializeDatabase() async {
     try {
-      debugPrint('🔧 Initializing database for signup page...');
+
       await DatabaseHelper.initializeDatabase();
-      debugPrint('✅ Database initialized successfully');
+
       
       // Test database connectivity
       await _testDatabaseConnectivity();
-    } catch (e) {
-      debugPrint('❌ Database initialization failed: $e');
-    }
+          } catch (e) {
+        // Database initialization failed
+      }
   }
 
   Future<void> _testDatabaseConnectivity() async {
     try {
-      debugPrint('🔍 Testing database connectivity...');
+
       final dataService = DataService();
       final users = await dataService.getAllUsers();
-      debugPrint('✅ Database connectivity test passed. Total users: ${users.length}');
+
     } catch (e) {
-      debugPrint('❌ Database connectivity test failed: $e');
+
     }
   }
 
