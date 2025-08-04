@@ -512,13 +512,13 @@ class _AdminPageState extends State<AdminPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.inventory),
-            onPressed: () => Navigator.pushNamed(context, '/blood_inventory'),
+            onPressed: () => Navigator.pushNamed(context, '/blood-inventory'),
             tooltip: 'Blood Inventory',
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () =>
-                Navigator.pushNamed(context, '/notification_management'),
+                Navigator.pushNamed(context, '/notification-management'),
             tooltip: 'Notifications',
           ),
           IconButton(
@@ -773,7 +773,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 ElevatedButton.icon(
                   onPressed: () =>
-                      Navigator.pushNamed(context, '/blood_inventory'),
+                      Navigator.pushNamed(context, '/blood-inventory'),
                   icon: const Icon(Icons.inventory),
                   label: const Text('Manage Inventory'),
                   style: ElevatedButton.styleFrom(
