@@ -12,13 +12,10 @@ class DataService {
   static Future<void> initializeDatabase() async {
     try {
       if (kIsWeb) {
-        debugPrint('DataService: Web platform - skipping SQLite initialization');
         return;
       }
       await DatabaseHelper.initializeDatabase();
-      debugPrint('DataService: Database initialized successfully');
     } catch (e) {
-      debugPrint('DataService: Error initializing database: $e');
       rethrow;
     }
   }
@@ -32,7 +29,6 @@ class DataService {
     try {
       return await _dbHelper.getAllUsers();
     } catch (e) {
-      debugPrint('DataService: Error getting all users: $e');
       return [];
     }
   }
@@ -42,7 +38,6 @@ class DataService {
     try {
       return await _dbHelper.getAllUsersIncludingInactive();
     } catch (e) {
-      debugPrint('DataService: Error getting all users including inactive: $e');
       return [];
     }
   }
@@ -52,7 +47,6 @@ class DataService {
     try {
       return await _dbHelper.getUserByEmail(email);
     } catch (e) {
-      debugPrint('DataService: Error getting user by email: $e');
       return null;
     }
   }
@@ -62,7 +56,6 @@ class DataService {
     try {
       return await _dbHelper.getUserById(userId);
     } catch (e) {
-      debugPrint('DataService: Error getting user by ID: $e');
       return null;
     }
   }
@@ -73,7 +66,6 @@ class DataService {
     try {
       return await _dbHelper.authenticateUser(email, password);
     } catch (e) {
-      debugPrint('DataService: Error authenticating user: $e');
       return null;
     }
   }
@@ -83,7 +75,6 @@ class DataService {
     try {
       return await _dbHelper.insertUser(userData);
     } catch (e) {
-      debugPrint('DataService: Error inserting user: $e');
       return false;
     }
   }
