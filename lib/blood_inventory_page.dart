@@ -143,11 +143,11 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withOpacity(0.2),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withOpacity(0.3),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
@@ -186,9 +186,9 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,10 +236,10 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _getBloodGroupColor(bloodGroup).withValues(alpha: 0.3),
+          color: _getBloodGroupColor(bloodGroup).withOpacity(0.3),
           width: 2,
         ),
       ),
@@ -252,7 +252,7 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: _getBloodGroupColor(bloodGroup).withValues(alpha: 0.2),
+                color: _getBloodGroupColor(bloodGroup).withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -279,7 +279,7 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getStatusColor(status).withValues(alpha: 0.2),
+                color: _getStatusColor(status).withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _getStatusColor(status),
@@ -314,9 +314,9 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,9 +371,9 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -381,7 +381,7 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: color.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),

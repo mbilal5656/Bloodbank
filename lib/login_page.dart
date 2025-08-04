@@ -191,7 +191,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   height: 150,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: Colors.white.withOpacity(0.1),
                   ),
                 ),
               ),
@@ -203,7 +203,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.05),
+                    color: Colors.white.withOpacity(0.05),
                   ),
                 ),
               ),
@@ -258,7 +258,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(25),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1A237E).withValues(alpha: 0.3),
+                color: const Color(0xFF1A237E).withOpacity(0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -316,7 +316,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -530,7 +530,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
                               ),
-          shadowColor: const Color(0xFF1A237E).withValues(alpha: 0.3),
+          shadowColor: const Color(0xFF1A237E).withOpacity(0.3),
                             ),
                             child: _isLoading
                                 ? const SizedBox(

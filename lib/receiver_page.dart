@@ -442,7 +442,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         prefixIcon: Icon(icon, color: Colors.white70),
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.2),
+        fillColor: Colors.white.withOpacity(0.2),
         labelStyle: const TextStyle(color: Colors.white70),
       ),
       style: const TextStyle(color: Colors.white),
@@ -459,7 +459,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         prefixIcon: const Icon(Icons.bloodtype, color: Colors.white70),
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.2),
+        fillColor: Colors.white.withOpacity(0.2),
         labelStyle: const TextStyle(color: Colors.white70),
       ),
       dropdownColor: const Color(0xFF1A237E),
@@ -488,7 +488,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         prefixIcon: const Icon(Icons.priority_high, color: Colors.white70),
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.2),
+        fillColor: Colors.white.withOpacity(0.2),
         labelStyle: const TextStyle(color: Colors.white70),
       ),
       dropdownColor: const Color(0xFF1A237E),
@@ -508,9 +508,9 @@ class _ReceiverPageState extends State<ReceiverPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.2),
+        color: Colors.green.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
+        border: Border.all(color: Colors.green.withOpacity(0.5)),
       ),
       child: Column(
         children: [
@@ -546,7 +546,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         prefixIcon: const Icon(Icons.security, color: Colors.white70),
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.2),
+        fillColor: Colors.white.withOpacity(0.2),
         labelStyle: const TextStyle(color: Colors.white70),
         hintText: 'Enter 8-digit verification code',
         hintStyle: const TextStyle(color: Colors.white54),
@@ -631,9 +631,9 @@ class _ReceiverPageState extends State<ReceiverPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
