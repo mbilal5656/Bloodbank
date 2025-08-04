@@ -68,7 +68,6 @@ class _AdminPageState extends State<AdminPage> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading data: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

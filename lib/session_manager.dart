@@ -45,10 +45,7 @@ class SessionManager {
       await prefs.setBool(_isLoggedInKey, true);
       await prefs.setBool(_rememberMeKey, rememberMe);
 
-      debugPrint('User session saved: $email (ID: $userId)');
-      debugPrint('Session token: $sessionToken');
     } catch (e) {
-      debugPrint('Error saving user session: $e');
       rethrow;
     }
   }
@@ -67,7 +64,6 @@ class SessionManager {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getInt(_userIdKey);
     } catch (e) {
-      debugPrint('Error getting user ID: $e');
       return null;
     }
   }
@@ -78,7 +74,6 @@ class SessionManager {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_emailKey);
     } catch (e) {
-      debugPrint('Error getting user email: $e');
       return null;
     }
   }
@@ -89,7 +84,6 @@ class SessionManager {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_userTypeKey);
     } catch (e) {
-      debugPrint('Error getting user type: $e');
       return null;
     }
   }
@@ -100,7 +94,6 @@ class SessionManager {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_userNameKey);
     } catch (e) {
-      debugPrint('Error getting user name: $e');
       return null;
     }
   }
@@ -111,7 +104,6 @@ class SessionManager {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_sessionTokenKey);
     } catch (e) {
-      debugPrint('Error getting session token: $e');
       return null;
     }
   }
@@ -126,7 +118,6 @@ class SessionManager {
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting login time: $e');
       return null;
     }
   }
@@ -141,7 +132,6 @@ class SessionManager {
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting last activity: $e');
       return null;
     }
   }
@@ -152,7 +142,6 @@ class SessionManager {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_deviceInfoKey);
     } catch (e) {
-      debugPrint('Error getting device info: $e');
       return null;
     }
   }
@@ -178,7 +167,6 @@ class SessionManager {
 
       return false;
     } catch (e) {
-      debugPrint('Error checking login status: $e');
       return false;
     }
   }
@@ -213,7 +201,7 @@ class SessionManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_lastActivityKey, DateTime.now().toIso8601String());
     } catch (e) {
-      debugPrint('Error updating last activity: $e');
+      // Error updating last activity
     }
   }
 
@@ -224,7 +212,6 @@ class SessionManager {
       final timeoutMinutes = prefs.getInt(_sessionTimeoutKey) ?? 30;
       return Duration(minutes: timeoutMinutes);
     } catch (e) {
-      debugPrint('Error getting session timeout: $e');
       return _defaultSessionTimeout;
     }
   }
@@ -234,10 +221,8 @@ class SessionManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_sessionTimeoutKey, timeout.inMinutes);
-      debugPrint('Session timeout set to: ${timeout.inMinutes} minutes');
       return true;
     } catch (e) {
-      debugPrint('Error setting session timeout: $e');
       return false;
     }
   }
@@ -248,7 +233,6 @@ class SessionManager {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_rememberMeKey) ?? false;
     } catch (e) {
-      debugPrint('Error checking remember me: $e');
       return false;
     }
   }
@@ -258,10 +242,8 @@ class SessionManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_rememberMeKey, enabled);
-      debugPrint('Remember me set to: $enabled');
       return true;
     } catch (e) {
-      debugPrint('Error setting remember me: $e');
       return false;
     }
   }
@@ -275,7 +257,6 @@ class SessionManager {
       final now = DateTime.now();
       return now.difference(loginTime);
     } catch (e) {
-      debugPrint('Error getting session duration: $e');
       return null;
     }
   }
@@ -303,7 +284,6 @@ class SessionManager {
         'isExpired': await _isSessionExpired(),
       };
     } catch (e) {
-      debugPrint('Error getting session info: $e');
       return null;
     }
   }
@@ -326,9 +306,7 @@ class SessionManager {
 
       // Don't clear remember me and session timeout settings
 
-      debugPrint('User session cleared successfully');
     } catch (e) {
-      debugPrint('Error clearing session: $e');
       rethrow;
     }
   }
@@ -338,9 +316,7 @@ class SessionManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
-      debugPrint('All session data cleared successfully');
     } catch (e) {
-      debugPrint('Error clearing all data: $e');
       rethrow;
     }
   }
@@ -365,7 +341,6 @@ class SessionManager {
         'sessionTimeout': prefs.getInt(_sessionTimeoutKey) ?? 30,
       };
     } catch (e) {
-      debugPrint('Error getting session data: $e');
       return {};
     }
   }
@@ -375,9 +350,7 @@ class SessionManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_userNameKey, newName);
-      debugPrint('User name updated: $newName');
     } catch (e) {
-      debugPrint('Error updating user name: $e');
       rethrow;
     }
   }
@@ -387,9 +360,7 @@ class SessionManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_userTypeKey, newType);
-      debugPrint('User type updated: $newType');
     } catch (e) {
-      debugPrint('Error updating user type: $e');
       rethrow;
     }
   }
@@ -399,9 +370,7 @@ class SessionManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_emailKey, newEmail);
-      debugPrint('User email updated: $newEmail');
     } catch (e) {
-      debugPrint('Error updating user email: $e');
       rethrow;
     }
   }
@@ -431,7 +400,6 @@ class SessionManager {
       final storedToken = await getSessionToken();
       return storedToken == token;
     } catch (e) {
-      debugPrint('Error validating session token: $e');
       return false;
     }
   }
@@ -443,10 +411,8 @@ class SessionManager {
       if (!isLoggedInStatus) return false;
 
       await _updateLastActivity();
-      debugPrint('Session refreshed successfully');
       return true;
     } catch (e) {
-      debugPrint('Error refreshing session: $e');
       return false;
     }
   }
@@ -465,7 +431,6 @@ class SessionManager {
 
       return timeUntilExpiry <= warningThreshold;
     } catch (e) {
-      debugPrint('Error checking if session is about to expire: $e');
       return true;
     }
   }
@@ -483,7 +448,6 @@ class SessionManager {
 
       return timeUntilExpiry.isNegative ? Duration.zero : timeUntilExpiry;
     } catch (e) {
-      debugPrint('Error getting time until expiry: $e');
       return null;
     }
   }
@@ -493,10 +457,8 @@ class SessionManager {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_autoLogoutKey, enabled);
-      debugPrint('Auto logout set to: $enabled');
       return true;
     } catch (e) {
-      debugPrint('Error setting auto logout: $e');
       return false;
     }
   }
@@ -507,7 +469,6 @@ class SessionManager {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_autoLogoutKey) ?? true;
     } catch (e) {
-      debugPrint('Error checking auto logout: $e');
       return true;
     }
   }
