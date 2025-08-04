@@ -138,11 +138,11 @@ class NavigationUtils {
   }
 
   static void navigateToBloodInventory(BuildContext context) {
-    Navigator.pushNamed(context, '/blood_inventory');
+    Navigator.pushNamed(context, '/blood-inventory');
   }
 
   static void navigateToNotificationManagement(BuildContext context) {
-    Navigator.pushNamed(context, '/notifications');
+    Navigator.pushNamed(context, '/notification-management');
   }
 
   static Future<void> logout(BuildContext context) async {
