@@ -45,10 +45,9 @@ class SessionManager {
       await prefs.setBool(_isLoggedInKey, true);
       await prefs.setBool(_rememberMeKey, rememberMe);
 
-      debugPrint('User session saved: $email (ID: $userId)');
-      debugPrint('Session token: $sessionToken');
+
     } catch (e) {
-      debugPrint('Error saving user session: $e');
+
       rethrow;
     }
   }

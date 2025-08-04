@@ -158,7 +158,7 @@ class NavigationUtils {
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
     } catch (e) {
-      debugPrint('Error during logout: $e');
+      
       if (context.mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }

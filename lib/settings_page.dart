@@ -36,7 +36,7 @@ class _SettingsPageState extends State<SettingsPage> {
         }
       }
     } catch (e) {
-      debugPrint('Error loading user info: $e');
+      
     } finally {
       setState(() => _isLoading = false);
     }
