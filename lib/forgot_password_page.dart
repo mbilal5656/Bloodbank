@@ -124,11 +124,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           width: 100,
           height: 100,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withOpacity(0.2),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withOpacity(0.3),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
@@ -166,9 +166,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: Form(
         key: _formKey,
@@ -182,7 +182,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.1),
+                fillColor: Colors.white.withOpacity(0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
               ),
               style: const TextStyle(color: Colors.white),
@@ -256,9 +256,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: Colors.white.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
           ),
           child: const Column(
             children: [

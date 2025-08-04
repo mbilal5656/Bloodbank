@@ -134,11 +134,11 @@ class _ProfilePageState extends State<ProfilePage> {
           width: 120,
           height: 120,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withOpacity(0.2),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withOpacity(0.3),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
@@ -164,7 +164,7 @@ class _ProfilePageState extends State<ProfilePage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: _getUserTypeColor(_userData['userType'] ?? '')
-                .withValues(alpha: 0.2),
+                .withOpacity(0.2),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: _getUserTypeColor(_userData['userType'] ?? ''),
@@ -188,9 +188,9 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: Column(
         children: [
@@ -217,7 +217,7 @@ class _ProfilePageState extends State<ProfilePage> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: Colors.white, size: 20),
@@ -302,9 +302,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
       child: ListTile(
         leading: Container(
@@ -312,8 +312,8 @@ class _ProfilePageState extends State<ProfilePage> {
           height: 40,
           decoration: BoxDecoration(
             color: isDestructive
-                ? Colors.red.withValues(alpha: 0.2)
-                : Colors.white.withValues(alpha: 0.2),
+                ? Colors.red.withOpacity(0.2)
+                : Colors.white.withOpacity(0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -333,7 +333,7 @@ class _ProfilePageState extends State<ProfilePage> {
           subtitle,
           style: TextStyle(
             color: isDestructive
-                ? Colors.red.withValues(alpha: 0.7)
+                ? Colors.red.withOpacity(0.7)
                 : Colors.white70,
             fontSize: 12,
           ),
