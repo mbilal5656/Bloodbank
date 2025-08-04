@@ -797,8 +797,8 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                     decoration: BoxDecoration(
                       color: entry.value > 0
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : Colors.red.withValues(alpha: 0.1),
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: entry.value > 0 ? Colors.green : Colors.red,
@@ -1077,13 +1077,13 @@ class _AdminPageState extends State<AdminPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isActive
-              ? Colors.green.withValues(alpha: 0.3)
-              : Colors.red.withValues(alpha: 0.3),
+              ? Colors.green.withOpacity(0.3)
+              : Colors.red.withOpacity(0.3),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -1094,7 +1094,7 @@ class _AdminPageState extends State<AdminPage> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: _getUserTypeColor(userType).withValues(alpha: 0.2),
+            color: _getUserTypeColor(userType).withOpacity(0.2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -1124,7 +1124,7 @@ class _AdminPageState extends State<AdminPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getUserTypeColor(userType).withValues(alpha: 0.2),
+                color: _getUserTypeColor(userType).withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _getUserTypeColor(userType),
