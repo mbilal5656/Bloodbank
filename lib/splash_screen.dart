@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'main.dart' show UserSession, NavigationUtils;
 import 'session_manager.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'utils/database_verification.dart';
+
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    debugPrint('Splash screen: Initializing...');
+    // Initializing splash screen
 
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -49,7 +49,7 @@ class _SplashScreenState extends State<SplashScreen>
       curve: Curves.easeIn,
     ));
 
-    debugPrint('Splash screen: Starting animation...');
+    // Starting animation
     _startAnimation();
   }
 
@@ -65,7 +65,6 @@ class _SplashScreenState extends State<SplashScreen>
       // Add a timeout to prevent getting stuck
       _checkUserSessionWithTimeout();
     } catch (e) {
-      debugPrint('Error in animation: $e');
       if (!_isDisposed) {
         _checkUserSessionWithTimeout();
       }
@@ -76,13 +75,10 @@ class _SplashScreenState extends State<SplashScreen>
     if (_isDisposed) return;
 
     try {
-      debugPrint('🔄 Splash screen: Starting session check with timeout...');
       // Set a timeout of 5 seconds (reduced from 8)
       final result = await _checkUserSession().timeout(
         const Duration(seconds: 5),
         onTimeout: () {
-          debugPrint(
-              '⏰ Splash screen: Session check timed out, navigating to home');
           return 'timeout';
         },
       );
@@ -90,15 +86,12 @@ class _SplashScreenState extends State<SplashScreen>
       if (_isDisposed) return;
 
       if (result == 'timeout' && mounted) {
-        debugPrint('🚀 Splash screen: Navigating to home due to timeout');
         if (context.mounted) {
           NavigationUtils.navigateToHome(context);
         }
       }
     } catch (e) {
-      debugPrint('❌ Splash screen: Error in session check with timeout: $e');
       if (!_isDisposed && mounted && context.mounted) {
-        debugPrint('🚀 Splash screen: Navigating to home due to error');
         NavigationUtils.navigateToHome(context);
       }
     }
@@ -108,36 +101,22 @@ class _SplashScreenState extends State<SplashScreen>
     if (_isDisposed) return 'timeout';
 
     try {
-      debugPrint('Splash screen: Checking user session...');
-
       // Initialize and verify database
       try {
         if (!kIsWeb) {
-          debugPrint('🔍 Verifying database connection...');
-          final verificationResult = await DatabaseVerification.verifyDatabaseConnection();
-          
-          if (verificationResult['status'] == 'success') {
-            debugPrint('✅ Database verification successful: ${verificationResult['message']}');
-          } else {
-            debugPrint('⚠️ Database verification failed: ${verificationResult['error']}');
-          }
+          // Database verification removed for production
         }
       } catch (e) {
-        debugPrint('⚠️ Database initialization failed, continuing anyway: $e');
+        // Database initialization failed, continuing anyway
       }
 
       final sessionData = await SessionManager.getSessionData();
-      debugPrint(
-          'Splash screen: Session data received: ${sessionData.isNotEmpty}');
-
       if (_isDisposed || !mounted) {
-        debugPrint('Splash screen: Widget not mounted, returning');
         return 'timeout';
       }
 
       if (sessionData.isNotEmpty && sessionData['userType'] != null) {
         // User is logged in, navigate to appropriate page
-        debugPrint('Splash screen: User is logged in, navigating to user page');
         UserSession.userId = sessionData['userId'] ?? 0;
         UserSession.email = sessionData['email'] ?? '';
         UserSession.userType = sessionData['userType'] ?? '';
@@ -152,7 +131,6 @@ class _SplashScreenState extends State<SplashScreen>
         }
       } else {
         // No session, go to home page
-        debugPrint('Splash screen: No session found, navigating to home');
         await Future.delayed(const Duration(milliseconds: 300));
 
         if (!_isDisposed && mounted && context.mounted) {
@@ -161,12 +139,10 @@ class _SplashScreenState extends State<SplashScreen>
       }
       return null;
     } catch (e) {
-      debugPrint('Splash screen: Error checking session: $e');
       // Reduced delay
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (!_isDisposed && mounted && context.mounted) {
-        debugPrint('Splash screen: Navigating to home due to error');
         NavigationUtils.navigateToHome(context);
       }
       return 'timeout';

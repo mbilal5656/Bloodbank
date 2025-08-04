@@ -64,7 +64,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
         _unreadNotificationsCount = unreadCount;
       });
     } catch (e) {
-      debugPrint('Error loading notifications: $e');
+      // Error handling
     }
   }
 
