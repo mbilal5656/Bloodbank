@@ -295,7 +295,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: const Padding(
                   padding: EdgeInsets.all(24.0),
                   child: Text(
-                    '© 2024 Blood Bank Management System\nVersion 1.0.0',
+                    '© 2025 Blood Bank Management System\nVersion 1.0.0',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white54,

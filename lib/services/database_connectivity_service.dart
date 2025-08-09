@@ -31,7 +31,7 @@ class DatabaseConnectivityService {
       }
 
       // Test basic database operations
-      await DatabaseHelper.initializeDatabase();
+      await DataService.initializeDatabase();
       
       // Test connectivity with a simple query
       final testResult = await _testBasicConnectivity();

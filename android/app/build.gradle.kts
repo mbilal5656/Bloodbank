@@ -7,8 +7,22 @@ plugins {
 
 android {
     namespace = "com.example.bloodbank"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    compileSdk = 34
+    
+    // Completely disable NDK and native code
+    buildFeatures {
+        buildConfig = true
+    }
+    
+    // Disable all native code features
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+    
+    // Disable NDK completely
+    ndkVersion = null
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -25,8 +39,8 @@ android {
         applicationId = "com.example.bloodbank"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 21
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

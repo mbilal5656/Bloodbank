@@ -4,6 +4,8 @@ import 'donor_page.dart';
 import 'receiver_page.dart';
 import 'services/data_service.dart';
 import 'session_manager.dart';
+import 'db_helper.dart';
+import 'main.dart' show UserSession;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -28,6 +30,29 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _initializeDatabase();
+    _setupAnimations();
+  }
+
+  Future<void> _initializeDatabase() async {
+    try {
+      debugPrint('🔧 Initializing database for login page...');
+      await DataService.initializeDatabase();
+      debugPrint('✅ Database initialized successfully for login');
+    } catch (e) {
+      debugPrint('❌ Database initialization failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Database initialization failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _setupAnimations() {
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -67,7 +92,16 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+    debugPrint('🔧 Login button pressed');
+    debugPrint('📝 Form validation starting...');
+
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('❌ Form validation failed');
+      return;
+    }
+
+    debugPrint('✅ Form validation passed');
+    debugPrint('📝 Login attempt for email: ${_emailController.text.trim()}');
 
     setState(() {
       _isLoading = true;
@@ -75,54 +109,70 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
     try {
       final dataService = DataService();
-      final user =
-          await dataService.getUserByEmail(_emailController.text.trim());
+      
+      // Use the authenticateUser method which properly handles password hashing
+      final user = await dataService.authenticateUser(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
       if (user != null) {
-        // Verify password (in a real app, you'd hash the password)
-        if (user['password'] == _passwordController.text) {
-          // Save session
-          await SessionManager.saveUserSession(
-            userId: user['id'],
-            email: user['email'],
-            userType: user['userType'],
-            userName: user['name'],
-          );
+        debugPrint('✅ User authenticated: ${user['name']} (${user['userType']})');
+        
+        // Save session
+        await SessionManager.saveUserSession(
+          userId: user['id'],
+          email: user['email'],
+          userType: user['userType'],
+          userName: user['name'],
+        );
 
-          if (mounted) {
-            // Navigate based on user type
-            switch (user['userType'].toString().toLowerCase()) {
-              case 'admin':
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AdminPage()),
-                );
-                break;
-              case 'donor':
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const DonorPage()),
-                );
-                break;
-              case 'receiver':
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ReceiverPage()),
-                );
-                break;
-              default:
-                _showErrorSnackBar('Invalid user type');
-            }
+        // Update global session
+        UserSession.userId = user['id'];
+        UserSession.email = user['email'];
+        UserSession.userType = user['userType'];
+        UserSession.userName = user['name'];
+        UserSession.isLoggedIn = true;
+
+        debugPrint('✅ Session saved successfully');
+
+        if (mounted) {
+          // Navigate based on user type
+          switch (user['userType'].toString().toLowerCase()) {
+            case 'admin':
+              debugPrint('🔄 Navigating to Admin page');
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const AdminPage()),
+              );
+              break;
+            case 'donor':
+              debugPrint('🔄 Navigating to Donor page');
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const DonorPage()),
+              );
+              break;
+            case 'receiver':
+              debugPrint('🔄 Navigating to Receiver page');
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const ReceiverPage()),
+              );
+              break;
+            default:
+              debugPrint('❌ Invalid user type: ${user['userType']}');
+              _showErrorSnackBar('Invalid user type');
           }
-        } else {
-          _showErrorSnackBar('Invalid password');
         }
       } else {
-        _showErrorSnackBar('User not found');
+        debugPrint('❌ Authentication failed for email: ${_emailController.text.trim()}');
+        _showErrorSnackBar('Invalid email or password');
       }
     } catch (e) {
-      debugPrint('Login error: $e');
-      _showErrorSnackBar('Login failed: $e');
+      debugPrint('❌ Login error: $e');
+      debugPrint('❌ Error details: ${e.toString()}');
+      _showErrorSnackBar('Login failed: ${e.toString()}');
     } finally {
       if (mounted) {
         setState(() {
@@ -473,47 +523,97 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 
   Widget _buildRememberMeAndForgotPassword() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Remember me checkbox
-        Row(
-          children: [
-            Checkbox(
-              value: _rememberMe,
-              onChanged: (value) {
-                setState(() {
-                  _rememberMe = value ?? false;
-                });
-              },
-              activeColor: const Color(0xFF1A237E),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 350) {
+          // For smaller screens, stack vertically
+          return Column(
+            children: [
+              // Remember me checkbox
+              Row(
+                children: [
+                  Checkbox(
+                    value: _rememberMe,
+                    onChanged: (value) {
+                      setState(() {
+                        _rememberMe = value ?? false;
+                      });
+                    },
+                    activeColor: const Color(0xFF1A237E),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  Text(
+                    'Remember me',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
-            ),
-            Text(
-              'Remember me',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+              const SizedBox(height: 8),
+              // Forgot password link
+              TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/forgot-password');
+                },
+                child: Text(
+                  'Forgot Password?',
+                  style: TextStyle(
+                    color: const Color(0xFF1A237E),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
-        
-        // Forgot password link
-        TextButton(
-          onPressed: () {
-            Navigator.pushNamed(context, '/forgot-password');
-          },
-          child: Text(
-            'Forgot Password?',
-            style: TextStyle(
-              color: const Color(0xFF1A237E),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
+            ],
+          );
+        } else {
+          // For larger screens, use horizontal layout
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Remember me checkbox
+              Row(
+                children: [
+                  Checkbox(
+                    value: _rememberMe,
+                    onChanged: (value) {
+                      setState(() {
+                        _rememberMe = value ?? false;
+                      });
+                    },
+                    activeColor: const Color(0xFF1A237E),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  Text(
+                    'Remember me',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+              
+              // Forgot password link
+              TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/forgot-password');
+                },
+                child: Text(
+                  'Forgot Password?',
+                  style: TextStyle(
+                    color: const Color(0xFF1A237E),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+      },
     );
   }
 

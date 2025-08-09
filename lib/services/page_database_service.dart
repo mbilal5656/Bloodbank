@@ -13,7 +13,7 @@ class PageDatabaseService {
   static Future<void> initializePageDatabase() async {
     try {
       debugPrint('🔗 Initializing page database connections...');
-      await DatabaseHelper.initializeDatabase();
+      await DataService.initializeDatabase();
       debugPrint('✅ Page database connections initialized');
     } catch (e) {
       debugPrint('❌ Page database initialization error: $e');

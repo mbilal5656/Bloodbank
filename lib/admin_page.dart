@@ -59,8 +59,8 @@ class _AdminPageState extends State<AdminPage> {
 
       final dataService = DataService();
       final users = await dataService.getAllUsers();
-      final bloodInventorySummary =
-          await dataService.getBloodInventorySummary();
+      final bloodInventorySummary = await dataService
+          .getBloodInventorySummary();
 
       setState(() {
         _users = users;
@@ -76,7 +76,9 @@ class _AdminPageState extends State<AdminPage> {
             content: Text('Error loading data: ${e.toString()}'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
       }
@@ -219,7 +221,8 @@ class _AdminPageState extends State<AdminPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                  'User ${isActive ? 'activated' : 'deactivated'} successfully'),
+                'User ${isActive ? 'activated' : 'deactivated'} successfully',
+              ),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
             ),
@@ -398,7 +401,9 @@ class _AdminPageState extends State<AdminPage> {
                   items: const [
                     DropdownMenuItem(value: 'Donor', child: Text('Donor')),
                     DropdownMenuItem(
-                        value: 'Receiver', child: Text('Receiver')),
+                      value: 'Receiver',
+                      child: Text('Receiver'),
+                    ),
                     DropdownMenuItem(value: 'Admin', child: Text('Admin')),
                   ],
                   onChanged: (value) {
@@ -421,7 +426,7 @@ class _AdminPageState extends State<AdminPage> {
               if (_formKey.currentState!.validate()) {
                 // Close dialog immediately to avoid BuildContext issues
                 Navigator.pop(dialogContext);
-                
+
                 try {
                   final dataService = DataService();
 
@@ -443,7 +448,10 @@ class _AdminPageState extends State<AdminPage> {
                 } catch (e) {
                   // Schedule snackbar to be shown after the current frame
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _showSnackBar('Error updating user: ${e.toString()}', isError: true);
+                    _showSnackBar(
+                      'Error updating user: ${e.toString()}',
+                      isError: true,
+                    );
                   });
                 }
               }
@@ -481,8 +489,6 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
-
-
   IconData _getUserTypeIcon(String userType) {
     switch (userType.toLowerCase()) {
       case 'admin':
@@ -500,13 +506,15 @@ class _AdminPageState extends State<AdminPage> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFF1A237E),
+        backgroundColor: isDark
+            ? const Color(0xFF1E1E1E)
+            : const Color(0xFF1A237E),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -535,13 +543,13 @@ class _AdminPageState extends State<AdminPage> {
             icon: const Icon(Icons.logout),
             onPressed: () async => await NavigationUtils.logout(context),
           ),
-
         ],
       ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
+            heroTag: 'notification_fab',
             onPressed: () {
               setState(() {
                 _showNotificationForm = !_showNotificationForm;
@@ -561,6 +569,7 @@ class _AdminPageState extends State<AdminPage> {
           ),
           const SizedBox(height: 16),
           FloatingActionButton(
+            heroTag: 'add_user_fab',
             onPressed: () {
               setState(() => _showAddUserForm = !_showAddUserForm);
             },
@@ -581,43 +590,49 @@ class _AdminPageState extends State<AdminPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'User Management',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: isDark ? Colors.white : const Color(0xFF1A237E),
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        'Total Users: ${_users.length}',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: isDark ? Colors.white70 : const Color(0xFF1A237E),
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'User Management',
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF1A237E),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          Text(
+                            'Total Users: ${_users.length}',
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(
+                                  color: isDark
+                                      ? Colors.white70
+                                      : const Color(0xFF1A237E),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 20),
-
                   if (_showNotificationForm) ...[
                     _buildNotificationForm(),
                     const SizedBox(height: 20),
                   ],
-
                   _buildBloodInventorySummary(),
-
                   const SizedBox(height: 20),
-
                   if (_showAddUserForm) ...[
                     _buildAddUserForm(),
                     const SizedBox(height: 20),
                   ],
-
                   ..._users.map((user) => _buildUserCard(user)),
-
                   const SizedBox(height: 32),
                 ],
               ),
@@ -627,7 +642,7 @@ class _AdminPageState extends State<AdminPage> {
 
   Widget _buildNotificationForm() {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -640,16 +655,18 @@ class _AdminPageState extends State<AdminPage> {
             Text(
               'Send Notification',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: isDark ? Colors.white : const Color(0xFF1A237E),
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: isDark ? Colors.white : const Color(0xFF1A237E),
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _notificationTitleController,
               decoration: InputDecoration(
                 labelText: 'Notification Title',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 filled: true,
                 fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
               ),
@@ -659,89 +676,203 @@ class _AdminPageState extends State<AdminPage> {
               controller: _notificationMessageController,
               decoration: InputDecoration(
                 labelText: 'Notification Message',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 filled: true,
                 fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
               ),
               maxLines: 3,
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedNotificationType,
-                    decoration: InputDecoration(
-                      labelText: 'Type',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      filled: true,
-                      fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
-                    ),
-                    items: ['info', 'success', 'warning', 'urgent']
-                        .map(
-                          (type) => DropdownMenuItem(
-                            value: type,
-                            child: Text(type.toUpperCase()),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 400) {
+                  // For smaller screens, stack vertically
+                  return Column(
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: _selectedNotificationType,
+                        decoration: InputDecoration(
+                          labelText: 'Type',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() => _selectedNotificationType = value!);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedTargetUserType,
-                    decoration: InputDecoration(
-                      labelText: 'Target',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      filled: true,
-                      fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
-                    ),
-                    items: ['all', 'Donor', 'Receiver', 'Admin']
-                        .map(
-                          (type) => DropdownMenuItem(
-                            value: type,
-                            child: Text(type == 'all' ? 'All Users' : type),
+                          filled: true,
+                          fillColor: isDark
+                              ? const Color(0xFF3C3C3C)
+                              : Colors.grey[50],
+                        ),
+                        items: ['info', 'success', 'warning', 'urgent']
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type.toUpperCase()),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() => _selectedNotificationType = value!);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: _selectedTargetUserType,
+                        decoration: InputDecoration(
+                          labelText: 'Target',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() => _selectedTargetUserType = value!);
-                    },
-                  ),
-                ),
-              ],
+                          filled: true,
+                          fillColor: isDark
+                              ? const Color(0xFF3C3C3C)
+                              : Colors.grey[50],
+                        ),
+                        items: ['all', 'Donor', 'Receiver', 'Admin']
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type == 'all' ? 'All Users' : type),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() => _selectedTargetUserType = value!);
+                        },
+                      ),
+                    ],
+                  );
+                } else {
+                  // For larger screens, use horizontal layout
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedNotificationType,
+                          decoration: InputDecoration(
+                            labelText: 'Type',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? const Color(0xFF3C3C3C)
+                                : Colors.grey[50],
+                          ),
+                          items: ['info', 'success', 'warning', 'urgent']
+                              .map(
+                                (type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type.toUpperCase()),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => _selectedNotificationType = value!);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedTargetUserType,
+                          decoration: InputDecoration(
+                            labelText: 'Target',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? const Color(0xFF3C3C3C)
+                                : Colors.grey[50],
+                          ),
+                          items: ['all', 'Donor', 'Receiver', 'Admin']
+                              .map(
+                                (type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(
+                                    type == 'all' ? 'All Users' : type,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => _selectedTargetUserType = value!);
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                }
+              },
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _sendNotification,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: const Text('Send Notification'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() => _showNotificationForm = false);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 350) {
+                  // For smaller screens, stack vertically
+                  return Column(
+                    children: [
+                      ElevatedButton(
+                        onPressed: _sendNotification,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Send Notification'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () {
+                          setState(() => _showNotificationForm = false);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                    ],
+                  );
+                } else {
+                  // For larger screens, use horizontal layout
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _sendNotification,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('Send Notification'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() => _showNotificationForm = false);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+              },
             ),
           ],
         ),
@@ -751,7 +882,7 @@ class _AdminPageState extends State<AdminPage> {
 
   Widget _buildBloodInventorySummary() {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -761,28 +892,69 @@ class _AdminPageState extends State<AdminPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Blood Inventory Summary',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: isDark ? Colors.white : const Color(0xFF1A237E),
-                        fontWeight: FontWeight.bold,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 400) {
+                  // For smaller screens, stack vertically
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Blood Inventory Summary',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF1A237E),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/blood_inventory'),
-                  icon: const Icon(Icons.inventory),
-                  label: const Text('Manage Inventory'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A237E),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ],
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/blood_inventory'),
+                        icon: const Icon(Icons.inventory),
+                        label: const Text('Manage Inventory'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1A237E),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                } else {
+                  // For larger screens, use horizontal layout
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Blood Inventory Summary',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF1A237E),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/blood_inventory'),
+                        icon: const Icon(Icons.inventory),
+                        label: const Text('Manage Inventory'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1A237E),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+              },
             ),
             const SizedBox(height: 16),
             if (_bloodInventorySummary.isNotEmpty)
@@ -845,7 +1017,7 @@ class _AdminPageState extends State<AdminPage> {
 
   Widget _buildAddUserForm() {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -860,9 +1032,9 @@ class _AdminPageState extends State<AdminPage> {
               Text(
                 'Add New User',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: isDark ? Colors.white : const Color(0xFF1A237E),
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: isDark ? Colors.white : const Color(0xFF1A237E),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
               Row(
@@ -872,9 +1044,13 @@ class _AdminPageState extends State<AdminPage> {
                       controller: _nameController,
                       decoration: InputDecoration(
                         labelText: 'Full Name',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         filled: true,
-                        fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
+                        fillColor: isDark
+                            ? const Color(0xFF3C3C3C)
+                            : Colors.grey[50],
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -890,9 +1066,13 @@ class _AdminPageState extends State<AdminPage> {
                       controller: _emailController,
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         filled: true,
-                        fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
+                        fillColor: isDark
+                            ? const Color(0xFF3C3C3C)
+                            : Colors.grey[50],
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -910,98 +1090,232 @@ class _AdminPageState extends State<AdminPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
-                      ),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _userType,
-                      decoration: InputDecoration(
-                        labelText: 'User Type',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
-                      ),
-                      items: ['Donor', 'Receiver', 'Admin']
-                          .map(
-                            (type) => DropdownMenuItem(
-                              value: type,
-                              child: Text(type),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 400) {
+                    // For smaller screens, stack vertically
+                    return Column(
+                      children: [
+                        TextFormField(
+                          controller: _passwordController,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() => _userType = value!);
-                      },
-                    ),
-                  ),
-                ],
+                            filled: true,
+                            fillColor: isDark
+                                ? const Color(0xFF3C3C3C)
+                                : Colors.grey[50],
+                          ),
+                          obscureText: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter a password';
+                            }
+                            if (value.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: _userType,
+                          decoration: InputDecoration(
+                            labelText: 'User Type',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? const Color(0xFF3C3C3C)
+                                : Colors.grey[50],
+                          ),
+                          items: ['Donor', 'Receiver', 'Admin']
+                              .map(
+                                (type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => _userType = value!);
+                          },
+                        ),
+                      ],
+                    );
+                  } else {
+                    // For larger screens, use horizontal layout
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _passwordController,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF3C3C3C)
+                                  : Colors.grey[50],
+                            ),
+                            obscureText: true,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a password';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _userType,
+                            decoration: InputDecoration(
+                              labelText: 'User Type',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF3C3C3C)
+                                  : Colors.grey[50],
+                            ),
+                            items: ['Donor', 'Receiver', 'Admin']
+                                .map(
+                                  (type) => DropdownMenuItem(
+                                    value: type,
+                                    child: Text(type),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              setState(() => _userType = value!);
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _bloodGroupController,
-                      decoration: InputDecoration(
-                        labelText: 'Blood Group',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter blood group';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _ageController,
-                      decoration: InputDecoration(
-                        labelText: 'Age',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter age';
-                        }
-                        final age = int.tryParse(value);
-                        if (age == null || age < 1 || age > 120) {
-                          return 'Please enter a valid age';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 400) {
+                    // For smaller screens, stack vertically
+                    return Column(
+                      children: [
+                        TextFormField(
+                          controller: _bloodGroupController,
+                          decoration: InputDecoration(
+                            labelText: 'Blood Group',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? const Color(0xFF3C3C3C)
+                                : Colors.grey[50],
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter blood group';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _ageController,
+                          decoration: InputDecoration(
+                            labelText: 'Age',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: isDark
+                                ? const Color(0xFF3C3C3C)
+                                : Colors.grey[50],
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter age';
+                            }
+                            final age = int.tryParse(value);
+                            if (age == null || age < 1 || age > 120) {
+                              return 'Please enter a valid age';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    );
+                  } else {
+                    // For larger screens, use horizontal layout
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _bloodGroupController,
+                            decoration: InputDecoration(
+                              labelText: 'Blood Group',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF3C3C3C)
+                                  : Colors.grey[50],
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter blood group';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _ageController,
+                            decoration: InputDecoration(
+                              labelText: 'Age',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? const Color(0xFF3C3C3C)
+                                  : Colors.grey[50],
+                            ),
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter age';
+                              }
+                              final age = int.tryParse(value);
+                              if (age == null || age < 1 || age > 120) {
+                                return 'Please enter a valid age';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                },
               ),
               if (_userType != 'Admin') ...[
                 const SizedBox(height: 16),
@@ -1009,9 +1323,13 @@ class _AdminPageState extends State<AdminPage> {
                   controller: _contactController,
                   decoration: InputDecoration(
                     labelText: 'Contact Number',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
+                    fillColor: isDark
+                        ? const Color(0xFF3C3C3C)
+                        : Colors.grey[50],
                   ),
                   keyboardType: TextInputType.phone,
                   validator: (value) {
@@ -1032,7 +1350,9 @@ class _AdminPageState extends State<AdminPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1A237E),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       child: const Text('Add User'),
                     ),
@@ -1051,7 +1371,9 @@ class _AdminPageState extends State<AdminPage> {
                         _userType = 'Donor';
                       },
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       child: const Text('Cancel'),
                     ),
@@ -1079,40 +1401,41 @@ class _AdminPageState extends State<AdminPage> {
           color: isActive
               ? Colors.green.withValues(alpha: 0.3)
               : Colors.red.withValues(alpha: 0.3),
-          width: 2,
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: ListTile(
         leading: Container(
-          width: 50,
-          height: 50,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
-            color: _getUserTypeColor(userType).withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(12),
+            color: _getUserTypeColor(userType).withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             _getUserTypeIcon(userType),
             color: _getUserTypeColor(userType),
-            size: 24,
+            size: 22,
           ),
         ),
         title: Text(
           user['name'] ?? 'Unknown User',
           style: TextStyle(
             color: isDark ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 2),
             Text(
               user['email'] ?? 'No email',
               style: TextStyle(
@@ -1120,14 +1443,14 @@ class _AdminPageState extends State<AdminPage> {
                 fontSize: 12,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getUserTypeColor(userType).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
+                color: _getUserTypeColor(userType).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: _getUserTypeColor(userType),
+                  color: _getUserTypeColor(userType).withValues(alpha: 0.5),
                   width: 1,
                 ),
               ),
@@ -1135,7 +1458,7 @@ class _AdminPageState extends State<AdminPage> {
                 userType,
                 style: TextStyle(
                   color: _getUserTypeColor(userType),
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1146,18 +1469,26 @@ class _AdminPageState extends State<AdminPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 12,
-              height: 12,
+              width: 10,
+              height: 10,
               decoration: BoxDecoration(
                 color: isActive ? Colors.green : Colors.red,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: (isActive ? Colors.green : Colors.red).withValues(alpha: 
+                      0.5,
+                    ),
+                    blurRadius: 4,
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
             PopupMenuButton<String>(
               icon: Icon(
-                Icons.more_vert, 
-                color: isDark ? Colors.white70 : Colors.grey[600]
+                Icons.more_vert,
+                color: isDark ? Colors.white70 : Colors.grey[600],
               ),
               onSelected: (value) async {
                 switch (value) {
@@ -1177,7 +1508,7 @@ class _AdminPageState extends State<AdminPage> {
                   value: 'edit',
                   child: Row(
                     children: [
-                      Icon(Icons.edit),
+                      Icon(Icons.edit, size: 20),
                       SizedBox(width: 8),
                       Text('Edit'),
                     ],
@@ -1187,7 +1518,7 @@ class _AdminPageState extends State<AdminPage> {
                   value: 'toggle',
                   child: Row(
                     children: [
-                      Icon(Icons.swap_horiz),
+                      Icon(Icons.swap_horiz, size: 20),
                       SizedBox(width: 8),
                       Text('Toggle Status'),
                     ],
@@ -1197,7 +1528,7 @@ class _AdminPageState extends State<AdminPage> {
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete, color: Colors.red),
+                      Icon(Icons.delete, color: Colors.red, size: 20),
                       SizedBox(width: 8),
                       Text('Delete', style: TextStyle(color: Colors.red)),
                     ],

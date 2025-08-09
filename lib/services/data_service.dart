@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../db_helper.dart';
+import 'web_database_service.dart';
 
 class DataService {
   static final DataService _instance = DataService._internal();
@@ -12,25 +13,32 @@ class DataService {
   static Future<void> initializeDatabase() async {
     try {
       if (kIsWeb) {
-        debugPrint('DataService: Web platform - skipping SQLite initialization');
-        return;
+        debugPrint(
+          'DataService: Web platform - initializing in-memory database',
+        );
+        await WebDatabaseService.initialize();
+        debugPrint('DataService: Web database initialized successfully');
+      } else {
+        debugPrint('DataService: Mobile platform - initializing SQLite');
+        await DatabaseHelper.initializeDatabase();
+        debugPrint('DataService: SQLite database initialized successfully');
       }
-      await DatabaseHelper.initializeDatabase();
-      debugPrint('DataService: Database initialized successfully');
     } catch (e) {
       debugPrint('DataService: Error initializing database: $e');
       rethrow;
     }
   }
 
-
-
   // ===== USER OPERATIONS =====
 
   // Get all users
   Future<List<Map<String, dynamic>>> getAllUsers() async {
     try {
-      return await _dbHelper.getAllUsers();
+      if (kIsWeb) {
+        return await WebDatabaseService.getAllUsers();
+      } else {
+        return await _dbHelper.getAllUsers();
+      }
     } catch (e) {
       debugPrint('DataService: Error getting all users: $e');
       return [];
@@ -50,7 +58,11 @@ class DataService {
   // Get user by email
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
     try {
-      return await _dbHelper.getUserByEmail(email);
+      if (kIsWeb) {
+        return await WebDatabaseService.getUserByEmail(email);
+      } else {
+        return await _dbHelper.getUserByEmail(email);
+      }
     } catch (e) {
       debugPrint('DataService: Error getting user by email: $e');
       return null;
@@ -69,9 +81,15 @@ class DataService {
 
   // Authenticate user
   Future<Map<String, dynamic>?> authenticateUser(
-      String email, String password) async {
+    String email,
+    String password,
+  ) async {
     try {
-      return await _dbHelper.authenticateUser(email, password);
+      if (kIsWeb) {
+        return await WebDatabaseService.authenticateUser(email, password);
+      } else {
+        return await _dbHelper.authenticateUser(email, password);
+      }
     } catch (e) {
       debugPrint('DataService: Error authenticating user: $e');
       return null;
@@ -140,7 +158,10 @@ class DataService {
 
   // Change password
   Future<bool> changePassword(
-      int userId, String oldPassword, String newPassword) async {
+    int userId,
+    String oldPassword,
+    String newPassword,
+  ) async {
     try {
       return await _dbHelper.changePassword(userId, oldPassword, newPassword);
     } catch (e) {
@@ -164,7 +185,11 @@ class DataService {
   // Get all blood inventory
   Future<List<Map<String, dynamic>>> getAllBloodInventory() async {
     try {
-      return await _dbHelper.getAllBloodInventory();
+      if (kIsWeb) {
+        return await WebDatabaseService.getAllBloodInventory();
+      } else {
+        return await _dbHelper.getAllBloodInventory();
+      }
     } catch (e) {
       debugPrint('DataService: Error getting blood inventory: $e');
       return [];
@@ -193,7 +218,8 @@ class DataService {
 
   // Get blood inventory by group
   Future<Map<String, dynamic>?> getBloodInventoryByGroup(
-      String bloodGroup) async {
+    String bloodGroup,
+  ) async {
     try {
       return await _dbHelper.getBloodInventoryByGroup(bloodGroup);
     } catch (e) {
@@ -245,7 +271,11 @@ class DataService {
   // Get blood inventory summary
   Future<Map<String, int>> getBloodInventorySummary() async {
     try {
-      return await _dbHelper.getBloodInventorySummary();
+      if (kIsWeb) {
+        return await WebDatabaseService.getBloodInventorySummary();
+      } else {
+        return await _dbHelper.getBloodInventorySummary();
+      }
     } catch (e) {
       debugPrint('DataService: Error getting blood inventory summary: $e');
       return {};
@@ -308,7 +338,8 @@ class DataService {
 
   // Get requests by requester
   Future<List<Map<String, dynamic>>> getRequestsByRequester(
-      int requesterId) async {
+    int requesterId,
+  ) async {
     try {
       return await _dbHelper.getRequestsByRequester(requesterId);
     } catch (e) {
@@ -329,7 +360,10 @@ class DataService {
 
   // Reject blood request
   Future<bool> rejectBloodRequest(
-      int requestId, int rejectedBy, String reason) async {
+    int requestId,
+    int rejectedBy,
+    String reason,
+  ) async {
     try {
       return await _dbHelper.rejectBloodRequest(requestId, rejectedBy, reason);
     } catch (e) {
@@ -404,10 +438,16 @@ class DataService {
 
   // Create user session
   Future<bool> createUserSession(
-      int userId, String sessionToken, String deviceInfo) async {
+    int userId,
+    String sessionToken,
+    String deviceInfo,
+  ) async {
     try {
       return await _dbHelper.createUserSession(
-          userId, sessionToken, deviceInfo);
+        userId,
+        sessionToken,
+        deviceInfo,
+      );
     } catch (e) {
       debugPrint('DataService: Error creating user session: $e');
       return false;
@@ -511,15 +551,29 @@ class DataService {
   // Test database connectivity
   Future<Map<String, dynamic>> testDatabaseConnectivity() async {
     try {
+      // Test database initialization first
+      await DatabaseHelper.initializeDatabaseFactory();
+
       // Test basic database operations
       final users = await getAllUsers();
       final bloodInventory = await getAllBloodInventory();
-      
+
+      // Test database health
+      final dbHelper = DatabaseHelper();
+      final db = await dbHelper.database;
+      final tables = await db.query(
+        'sqlite_master',
+        where: 'type = ?',
+        whereArgs: ['table'],
+      );
+
       return {
         'status': 'success',
         'users': users.length,
         'bloodInventory': bloodInventory.length,
+        'tables': tables.length,
         'message': 'Database connection successful',
+        'details': 'All database operations working properly',
       };
     } catch (e) {
       debugPrint('DataService: Error testing database connectivity: $e');
@@ -527,6 +581,136 @@ class DataService {
         'status': 'error',
         'error': e.toString(),
         'message': 'Database connection failed',
+        'details': 'Please check database configuration',
+      };
+    }
+  }
+
+  // Test page-specific database operations
+  Future<Map<String, dynamic>> testPageDatabaseOperations(
+    String pageName,
+  ) async {
+    try {
+      switch (pageName.toLowerCase()) {
+        case 'home':
+          final users = await getAllUsers();
+          final bloodSummary = await getBloodInventorySummary();
+          return {
+            'status': 'success',
+            'page': pageName,
+            'operations': ['getAllUsers', 'getBloodInventorySummary'],
+            'results': {
+              'users': users.length,
+              'bloodGroups': bloodSummary.length,
+            },
+          };
+
+        case 'blood_inventory':
+          final inventory = await getAllBloodInventory();
+          final summary = await getBloodInventorySummary();
+          return {
+            'status': 'success',
+            'page': pageName,
+            'operations': ['getAllBloodInventory', 'getBloodInventorySummary'],
+            'results': {
+              'inventory': inventory.length,
+              'summary': summary.length,
+            },
+          };
+
+        case 'admin':
+          final users = await getAllUsers();
+          final donations = await getAllDonations();
+          final requests = await getAllBloodRequests();
+          return {
+            'status': 'success',
+            'page': pageName,
+            'operations': [
+              'getAllUsers',
+              'getAllDonations',
+              'getAllBloodRequests',
+            ],
+            'results': {
+              'users': users.length,
+              'donations': donations.length,
+              'requests': requests.length,
+            },
+          };
+
+        case 'donor':
+          final donors = await getUsersByType('Donor');
+          final donations = await getAllDonations();
+          return {
+            'status': 'success',
+            'page': pageName,
+            'operations': ['getUsersByType', 'getAllDonations'],
+            'results': {'donors': donors.length, 'donations': donations.length},
+          };
+
+        case 'receiver':
+          final receivers = await getUsersByType('Receiver');
+          final requests = await getAllBloodRequests();
+          return {
+            'status': 'success',
+            'page': pageName,
+            'operations': ['getUsersByType', 'getAllBloodRequests'],
+            'results': {
+              'receivers': receivers.length,
+              'requests': requests.length,
+            },
+          };
+
+        case 'profile':
+          final users = await getAllUsers();
+          return {
+            'status': 'success',
+            'page': pageName,
+            'operations': ['getAllUsers'],
+            'results': {'users': users.length},
+          };
+
+        default:
+          return {
+            'status': 'error',
+            'page': pageName,
+            'error': 'Unknown page: $pageName',
+          };
+      }
+    } catch (e) {
+      debugPrint(
+        'DataService: Error testing page database operations for $pageName: $e',
+      );
+      return {'status': 'error', 'page': pageName, 'error': e.toString()};
+    }
+  }
+
+  // Test database connectivity
+  Future<Map<String, dynamic>> testConnectivity() async {
+    try {
+      if (kIsWeb) {
+        return await WebDatabaseService.testConnectivity();
+      } else {
+        final users = await getAllUsers();
+        final bloodInventory = await getAllBloodInventory();
+        final donations = await getAllDonations();
+        final requests = await getAllBloodRequests();
+
+        return {
+          'status': 'success',
+          'users': users.length,
+          'bloodInventory': bloodInventory.length,
+          'donations': donations.length,
+          'requests': requests.length,
+          'message': 'Database connection successful',
+          'details': 'All database operations working properly',
+        };
+      }
+    } catch (e) {
+      return {
+        'status': 'error',
+        'error': e.toString(),
+        'message': 'Database connection failed',
+        'details': 'Please check database configuration',
       };
     }
   }

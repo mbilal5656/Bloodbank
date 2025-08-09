@@ -3,7 +3,6 @@ import 'main.dart' show UserSession, NavigationUtils;
 import 'session_manager.dart';
 import 'services/data_service.dart';
 
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -24,38 +23,31 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _checkLoginStatus() async {
     try {
-      debugPrint('🏠 Home page: Checking login status...');
       final sessionData = await SessionManager.getSessionData();
       final dataService = DataService();
 
       if (sessionData.isNotEmpty && sessionData['userType'] != null) {
-        debugPrint('✅ User is logged in: ${sessionData['userType']}');
-
         // Get user data from database
         final user = await dataService.getUserById(sessionData['userId'] ?? 0);
         if (user != null) {
-          debugPrint('✅ User data retrieved: ${user['name']}');
           setState(() {
             _isLoggedIn = true;
             _userType = sessionData['userType'] ?? '';
             _isLoading = false;
           });
         } else {
-          debugPrint('❌ User data not found in database');
           setState(() {
             _isLoggedIn = false;
             _isLoading = false;
           });
         }
       } else {
-        debugPrint('❌ No active session found');
         setState(() {
           _isLoggedIn = false;
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('❌ Error checking login status: $e');
       setState(() {
         _isLoggedIn = false;
         _isLoading = false;
@@ -107,46 +99,46 @@ class _HomePageState extends State<HomePage> {
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Header Section
-                _buildHeader(),
-                const SizedBox(height: 40),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Header Section
+                  _buildHeader(),
+                  const SizedBox(height: 40),
 
-                // Loading indicator
-                if (_isLoading)
-                  const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                else ...[
-                  // Welcome Message
-                  if (_isLoggedIn) _buildWelcomeMessage(),
-                  if (!_isLoggedIn) _buildGuestMessage(),
+                  // Loading indicator
+                  if (_isLoading)
+                    const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  else ...[
+                    // Welcome Message
+                    if (_isLoggedIn) _buildWelcomeMessage(),
+                    if (!_isLoggedIn) _buildGuestMessage(),
+
+                    const SizedBox(height: 40),
+
+                    // Main Action Cards
+                    if (_isLoggedIn)
+                      _buildUserDashboard()
+                    else
+                      _buildGuestActions(),
+
+                    const SizedBox(height: 40),
+
+                    // Features Section
+                    _buildFeaturesSection(),
+                  ],
 
                   const SizedBox(height: 40),
 
-                  // Main Action Cards
-                  if (_isLoggedIn)
-                    _buildUserDashboard()
-                  else
-                    _buildGuestActions(),
-
-                  const SizedBox(height: 40),
-
-                  // Features Section
-                  _buildFeaturesSection(),
+                  // Contact Section
+                  _buildContactSection(),
                 ],
-
-                const SizedBox(height: 40),
-
-
-
-                // Contact Section
-                _buildContactSection(),
-              ],
+              ),
             ),
           ),
         ),
@@ -171,11 +163,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.bloodtype,
-            size: 50,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.bloodtype, size: 50, color: Colors.white),
         ),
         const SizedBox(height: 20),
         const Text(
@@ -209,11 +197,7 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.person,
-            size: 40,
-            color: Colors.white,
-          ),
+          const Icon(Icons.person, size: 40, color: Colors.white),
           const SizedBox(height: 12),
           Text(
             'Welcome back, ${UserSession.userName?.isNotEmpty == true ? UserSession.userName : UserSession.userType ?? 'User'}!',
@@ -227,10 +211,7 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 8),
           Text(
             'You are logged in as $_userType',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: const TextStyle(fontSize: 14, color: Colors.white70),
           ),
         ],
       ),
@@ -247,11 +228,7 @@ class _HomePageState extends State<HomePage> {
       ),
       child: const Column(
         children: [
-          Icon(
-            Icons.people,
-            size: 40,
-            color: Colors.white,
-          ),
+          Icon(Icons.people, size: 40, color: Colors.white),
           SizedBox(height: 12),
           Text(
             'Welcome to Blood Bank Management System',
@@ -265,10 +242,7 @@ class _HomePageState extends State<HomePage> {
           SizedBox(height: 8),
           Text(
             'Please login or signup to access the system',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70),
             textAlign: TextAlign.center,
           ),
         ],
@@ -282,9 +256,9 @@ class _HomePageState extends State<HomePage> {
         Text(
           'Quick Actions',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 20),
         GridView.count(
@@ -340,46 +314,95 @@ class _HomePageState extends State<HomePage> {
         Text(
           'Get Started',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => NavigationUtils.navigateToLogin(context),
-                icon: const Icon(Icons.login),
-                label: const Text('Login'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF1A237E),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 400) {
+              // For smaller screens, stack vertically
+              return Column(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => NavigationUtils.navigateToLogin(context),
+                    icon: const Icon(Icons.login),
+                    label: const Text('Login'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF1A237E),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => Navigator.pushNamed(context, '/signup'),
-                icon: const Icon(Icons.person_add),
-                label: const Text('Sign Up'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: Colors.white),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.pushNamed(context, '/signup'),
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('Sign Up'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(color: Colors.white),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ],
+                  const SizedBox(height: 16),
+                ],
+              );
+            } else {
+              // For larger screens, use horizontal layout
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              NavigationUtils.navigateToLogin(context),
+                          icon: const Icon(Icons.login),
+                          label: const Text('Login'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF1A237E),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              Navigator.pushNamed(context, '/signup'),
+                          icon: const Icon(Icons.person_add),
+                          label: const Text('Sign Up'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              );
+            }
+          },
         ),
       ],
     );
@@ -408,20 +431,13 @@ class _HomePageState extends State<HomePage> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                color.withValues(alpha: 0.1),
-                color.withValues(alpha: 0.2),
-              ],
+              colors: [color.withValues(alpha: 0.1), color.withValues(alpha: 0.2)],
             ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 40,
-                color: color,
-              ),
+              Icon(icon, size: 40, color: color),
               const SizedBox(height: 12),
               Text(
                 title,
@@ -435,10 +451,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color.withValues(alpha: 0.7),
-                ),
+                style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.7)),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -454,9 +467,9 @@ class _HomePageState extends State<HomePage> {
         Text(
           'Features',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 20),
         _buildFeatureItem(
@@ -546,11 +559,7 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.contact_support,
-            size: 40,
-            color: Colors.white,
-          ),
+          const Icon(Icons.contact_support, size: 40, color: Colors.white),
           const SizedBox(height: 12),
           const Text(
             'Need Help?',
@@ -563,10 +572,7 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 8),
           const Text(
             'Contact our support team for assistance',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),

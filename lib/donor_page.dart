@@ -40,7 +40,6 @@ class _DonorPageState extends State<DonorPage> {
 
   Future<void> _loadNotifications() async {
     try {
-      debugPrint('🩸 Donor page: Loading notifications...');
       final notifications = await NotificationHelper.getNotificationsForUser(
         UserSession.userId ?? 0,
       );
@@ -48,14 +47,12 @@ class _DonorPageState extends State<DonorPage> {
         UserSession.userId ?? 0,
       );
 
-      debugPrint(
-          '✅ Notifications loaded: ${notifications.length} total, $unreadCount unread');
       setState(() {
         _notifications = notifications;
         _unreadNotificationsCount = unreadCount;
       });
     } catch (e) {
-      debugPrint('❌ Error loading notifications: $e');
+      // Handle error silently
     }
   }
 
@@ -87,8 +84,9 @@ class _DonorPageState extends State<DonorPage> {
                       title: Text(
                         notification['title'] ?? '',
                         style: TextStyle(
-                          fontWeight:
-                              isRead ? FontWeight.normal : FontWeight.bold,
+                          fontWeight: isRead
+                              ? FontWeight.normal
+                              : FontWeight.bold,
                         ),
                       ),
                       subtitle: Text(notification['message'] ?? ''),
@@ -164,20 +162,24 @@ class _DonorPageState extends State<DonorPage> {
         final isAgeEligible = age >= 18 && age <= 65;
 
         // Check last donation (if any)
-        final donations =
-            await dataService.getDonationsByDonor(UserSession.userId ?? 0);
+        final donations = await dataService.getDonationsByDonor(
+          UserSession.userId ?? 0,
+        );
         final lastDonation = donations.isNotEmpty ? donations.last : null;
 
-        final isEligible = isAgeEligible &&
+        final isEligible =
+            isAgeEligible &&
             (lastDonation == null ||
                 DateTime.now()
                         .difference(
-                            DateTime.parse(lastDonation['donationDate']))
+                          DateTime.parse(lastDonation['donationDate']),
+                        )
                         .inDays >=
                     56);
 
         debugPrint(
-            '📊 Eligibility check: Age=$isAgeEligible, Last donation=${lastDonation != null}');
+          '📊 Eligibility check: Age=$isAgeEligible, Last donation=${lastDonation != null}',
+        );
 
         setState(() {
           _isEligible = isEligible;
@@ -300,10 +302,7 @@ class _DonorPageState extends State<DonorPage> {
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(6),
               ),
-              constraints: const BoxConstraints(
-                minWidth: 12,
-                minHeight: 12,
-              ),
+              constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
               child: Text(
                 '$_unreadNotificationsCount',
                 style: const TextStyle(color: Colors.white, fontSize: 8),
@@ -325,9 +324,9 @@ class _DonorPageState extends State<DonorPage> {
             Text(
               'Blood Donation Eligibility',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFF1A237E),
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: const Color(0xFF1A237E),
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             Form(
@@ -422,32 +421,72 @@ class _DonorPageState extends State<DonorPage> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _checkEligibility,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1A237E),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text('Check Eligibility'),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _isEligible ? _submitDonation : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text('Submit Donation'),
-                        ),
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (constraints.maxWidth < 400) {
+                        // For smaller screens, stack vertically
+                        return Column(
+                          children: [
+                            ElevatedButton(
+                              onPressed: _checkEligibility,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1A237E),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: const Text('Check Eligibility'),
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: _isEligible ? _submitDonation : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: const Text('Submit Donation'),
+                            ),
+                          ],
+                        );
+                      } else {
+                        // For larger screens, use horizontal layout
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _checkEligibility,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF1A237E),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                                child: const Text('Check Eligibility'),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isEligible ? _submitDonation : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                                child: const Text('Submit Donation'),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
@@ -468,9 +507,9 @@ class _DonorPageState extends State<DonorPage> {
             Text(
               'Donation Code',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Container(
@@ -516,9 +555,9 @@ class _DonorPageState extends State<DonorPage> {
             Text(
               'Donation Guidelines',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: const Color(0xFF1A237E),
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: const Color(0xFF1A237E),
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             _buildGuideline(

@@ -16,10 +16,20 @@ import 'blood_inventory_page.dart';
 import 'notification_management_page.dart';
 import 'notification_helper.dart';
 import 'session_manager.dart';
+import 'db_helper.dart';
+import 'services/data_service.dart';
 import 'theme/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize database
+  try {
+    await DataService.initializeDatabase();
+    debugPrint('Database initialized successfully');
+  } catch (e) {
+    debugPrint('Error initializing database: $e');
+  }
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -59,9 +69,16 @@ class BloodBankApp extends StatelessWidget {
             '/profile': (context) => const ProfilePage(),
             '/settings': (context) => const SettingsPage(),
             '/contact': (context) => const ContactPage(),
+            '/blood_inventory': (context) => const BloodInventoryPage(),
             '/blood-inventory': (context) => const BloodInventoryPage(),
+            '/notification_management': (context) =>
+                const NotificationManagementPage(),
             '/notification-management': (context) =>
                 const NotificationManagementPage(),
+            // Add user-specific routes
+            '/user/Admin': (context) => const AdminPage(),
+            '/user/Donor': (context) => const DonorPage(),
+            '/user/Receiver': (context) => const ReceiverPage(),
           },
         );
       },
@@ -138,7 +155,7 @@ class NavigationUtils {
   }
 
   static void navigateToBloodInventory(BuildContext context) {
-    Navigator.pushNamed(context, '/blood_inventory');
+    Navigator.pushNamed(context, '/blood-inventory');
   }
 
   static void navigateToNotificationManagement(BuildContext context) {
@@ -166,7 +183,10 @@ class NavigationUtils {
   }
 
   static void showErrorDialog(
-      BuildContext context, String title, String message) {
+    BuildContext context,
+    String title,
+    String message,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -185,7 +205,10 @@ class NavigationUtils {
   }
 
   static void showSuccessDialog(
-      BuildContext context, String title, String message) {
+    BuildContext context,
+    String title,
+    String message,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -309,8 +332,11 @@ class AppUtils {
     return '${text.substring(0, maxLength)}...';
   }
 
-  static void showSnackBar(BuildContext context, String message,
-      {bool isError = false}) {
+  static void showSnackBar(
+    BuildContext context,
+    String message, {
+    bool isError = false,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

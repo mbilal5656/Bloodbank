@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "bloodbank" "\0"
+            VALUE "CompanyName", "Blood Bank Management System" "\0"
+            VALUE "FileDescription", "Blood Bank Management System - Comprehensive blood bank management application" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "bloodbank" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "bloodbank.exe" "\0"
-            VALUE "ProductName", "bloodbank" "\0"
+            VALUE "InternalName", "BloodBank" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 Blood Bank Management System. All rights reserved." "\0"
+            VALUE "OriginalFilename", "BloodBank.exe" "\0"
+            VALUE "ProductName", "Blood Bank Management System" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

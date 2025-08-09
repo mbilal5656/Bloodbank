@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'main.dart' show UserSession, NavigationUtils;
 import 'services/data_service.dart';
 import 'session_manager.dart';
-import 'db_helper.dart';
-
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -27,36 +26,6 @@ class _SignupPageState extends State<SignupPage> {
   bool _obscureConfirmPassword = true;
   String _selectedUserType = 'Donor';
   String _selectedBloodGroup = 'A+';
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeDatabase();
-  }
-
-  Future<void> _initializeDatabase() async {
-    try {
-      debugPrint('🔧 Initializing database for signup page...');
-      await DatabaseHelper.initializeDatabase();
-      debugPrint('✅ Database initialized successfully');
-      
-      // Test database connectivity
-      await _testDatabaseConnectivity();
-    } catch (e) {
-      debugPrint('❌ Database initialization failed: $e');
-    }
-  }
-
-  Future<void> _testDatabaseConnectivity() async {
-    try {
-      debugPrint('🔍 Testing database connectivity...');
-      final dataService = DataService();
-      final users = await dataService.getAllUsers();
-      debugPrint('✅ Database connectivity test passed. Total users: ${users.length}');
-    } catch (e) {
-      debugPrint('❌ Database connectivity test failed: $e');
-    }
-  }
 
   @override
   void dispose() {
@@ -93,10 +62,6 @@ class _SignupPageState extends State<SignupPage> {
 
     try {
       debugPrint('🔧 Starting signup process...');
-      
-      // Ensure database is initialized
-      await DatabaseHelper.initializeDatabase();
-      
       final dataService = DataService();
 
       // Check if email already exists
@@ -106,15 +71,14 @@ class _SignupPageState extends State<SignupPage> {
           await dataService.getUserByEmail(_emailController.text.trim());
       if (existingUser != null) {
         debugPrint('❌ Email already exists');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Email already registered. Please use a different email or login.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        if (!mounted) return;
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Email already registered. Please use a different email or login.'),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
 
@@ -162,50 +126,47 @@ class _SignupPageState extends State<SignupPage> {
           UserSession.userType = user['userType'];
           UserSession.userName = user['name'];
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Account created successfully! Welcome, ${user['name']}!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            NavigationUtils.navigateToUserPage(context, user['userType']);
-          }
+          if (!mounted) return;
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Account created successfully! Welcome, ${user['name']}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          if (!mounted) return;
+          NavigationUtils.navigateToUserPage(context, user['userType']);
         } else {
           debugPrint('❌ Failed to retrieve created user');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                    'User created but failed to retrieve. Please try logging in.'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
-        }
-      } else {
-        debugPrint('❌ Failed to create user');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          if (!mounted) return;
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Failed to create account. Please try again.'),
-              backgroundColor: Colors.red,
+              content: Text(
+                  'User created but failed to retrieve. Please try logging in.'),
+              backgroundColor: Colors.orange,
             ),
           );
         }
-      }
-    } catch (e) {
-      debugPrint('❌ Signup error: $e');
-      debugPrint('❌ Error details: ${e.toString()}');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Signup error: ${e.toString()}'),
+      } else {
+        debugPrint('❌ Failed to create user');
+        if (!mounted) return;
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to create account. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    } catch (e) {
+      debugPrint('❌ Signup error: $e');
+      debugPrint('❌ Error details: ${e.toString()}');
+      if (!mounted) return;
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Signup error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -633,10 +594,6 @@ class _SignupPageState extends State<SignupPage> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-
-
-
         const SizedBox(height: 16),
 
         // Terms and Conditions

@@ -1,31 +1,33 @@
+// Utility script to fix deprecated withValues(alpha:) usage
+// This script will be used to replace withValues(alpha:) with withOpacity()
+
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 void main() async {
   final files = [
-    'lib/splash_screen.dart',
-    'lib/signup_page.dart',
-    'lib/settings_page.dart',
-    'lib/receiver_page.dart',
-    'lib/profile_page.dart',
-    'lib/notification_management_page.dart',
-    'lib/login_page.dart',
     'lib/home_page.dart',
-    'lib/forgot_password_page.dart',
-    'lib/contact_page.dart',
-    'lib/blood_inventory_page.dart',
-    'lib/admin_page.dart',
+    'lib/login_page.dart',
+    'lib/notification_management_page.dart',
+    'lib/profile_page.dart',
+    'lib/receiver_page.dart',
+    'lib/settings_page.dart',
+    'lib/settings_page_enhanced.dart',
+    'lib/signup_page.dart',
+    'lib/splash_screen.dart',
   ];
 
   for (final file in files) {
     await fixWithOpacity(file);
   }
+  
+  print('Fixed withOpacity deprecation warnings in all files');
 }
 
 Future<void> fixWithOpacity(String filePath) async {
   final file = File(filePath);
   if (!await file.exists()) {
-    debugPrint('File $filePath does not exist');
+    print('File not found: $filePath');
     return;
   }
 
@@ -41,5 +43,5 @@ Future<void> fixWithOpacity(String filePath) async {
   );
 
   await file.writeAsString(content);
-  debugPrint('Fixed $filePath');
-} 
+  print('Fixed: $filePath');
+}

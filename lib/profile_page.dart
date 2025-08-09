@@ -3,7 +3,6 @@ import 'main.dart' show UserSession, NavigationUtils;
 import 'services/data_service.dart';
 import 'session_manager.dart';
 
-
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -30,12 +29,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadUserData() async {
     try {
-      debugPrint('👤 Profile page: Loading user data...');
       final dataService = DataService();
       final user = await dataService.getUserById(UserSession.userId ?? 0);
 
       if (user != null) {
-        debugPrint('✅ User data loaded: ${user['name']}');
         setState(() {
           _userData = user;
           _nameController.text = user['name'] ?? '';
@@ -47,13 +44,11 @@ class _ProfilePageState extends State<ProfilePage> {
           _isLoading = false;
         });
       } else {
-        debugPrint('❌ User data not found');
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('❌ Error loading user data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -93,7 +88,6 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: _editProfile,
             tooltip: 'Edit Profile',
           ),
-
         ],
       ),
       body: Container(
@@ -109,7 +103,8 @@ class _ProfilePageState extends State<ProfilePage> {
         child: SafeArea(
           child: _isLoading
               ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white))
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
@@ -163,8 +158,9 @@ class _ProfilePageState extends State<ProfilePage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: _getUserTypeColor(_userData['userType'] ?? '')
-                .withValues(alpha: 0.2),
+            color: _getUserTypeColor(
+              _userData['userType'] ?? '',
+            ).withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: _getUserTypeColor(_userData['userType'] ?? ''),
@@ -195,14 +191,26 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         children: [
           _buildInfoRow('Email', _userData['email'] ?? 'N/A', Icons.email),
-          _buildInfoRow('Blood Group', _userData['bloodGroup'] ?? 'N/A',
-              Icons.bloodtype),
-          _buildInfoRow('Age', '${_userData['age'] ?? 'N/A'} years',
-              Icons.calendar_today),
           _buildInfoRow(
-              'Contact', _userData['contactNumber'] ?? 'N/A', Icons.phone),
-          _buildInfoRow('Member Since', _formatDate(_userData['createdAt']),
-              Icons.person_add),
+            'Blood Group',
+            _userData['bloodGroup'] ?? 'N/A',
+            Icons.bloodtype,
+          ),
+          _buildInfoRow(
+            'Age',
+            '${_userData['age'] ?? 'N/A'} years',
+            Icons.calendar_today,
+          ),
+          _buildInfoRow(
+            'Contact',
+            _userData['contactNumber'] ?? 'N/A',
+            Icons.phone,
+          ),
+          _buildInfoRow(
+            'Member Since',
+            _formatDate(_userData['createdAt']),
+            Icons.person_add,
+          ),
         ],
       ),
     );
@@ -229,10 +237,7 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 Text(
                   value,
@@ -332,9 +337,7 @@ class _ProfilePageState extends State<ProfilePage> {
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: isDestructive
-                ? Colors.red.withValues(alpha: 0.7)
-                : Colors.white70,
+            color: isDestructive ? Colors.red.withValues(alpha: 0.7) : Colors.white70,
             fontSize: 12,
           ),
         ),

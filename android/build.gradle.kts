@@ -1,12 +1,12 @@
+// Top-level build.gradle.kts for Flutter project
 buildscript {
-    extra["kotlin_version"] = "2.1.0"
+    extra["kotlin_version"] = "1.9.10"
     repositories {
         google()
         mavenCentral()
     }
-
     dependencies {
-        classpath("com.android.tools.build:gradle:8.7.0")
+        classpath("com.android.tools.build:gradle:8.1.4")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${project.extra["kotlin_version"]}")
     }
 }
@@ -24,9 +24,6 @@ rootProject.layout.buildDirectory.value(newBuildDir)
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
-}
-
-subprojects {
     project.evaluationDependsOn(":app")
 }
 

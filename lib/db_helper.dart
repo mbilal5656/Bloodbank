@@ -28,13 +28,17 @@ class DatabaseHelper {
   // Initialize database factory for web/desktop platforms
   static Future<void> initializeDatabaseFactory() async {
     if (kIsWeb) {
-      debugPrint('Web platform detected - skipping SQLite initialization');
+      // Web platform detected - skipping SQLite initialization
       return;
     }
 
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+      try {
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+      } catch (e) {
+        // Error initializing database factory
+      }
     }
   }
 
@@ -49,15 +53,12 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     if (kIsWeb) {
       throw UnsupportedError(
-          'SQLite is not supported on web platforms. Please use a web-compatible database.');
+        'SQLite is not supported on web platforms. Please use a web-compatible database.',
+      );
     }
 
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, _databaseName);
-
-    debugPrint('Database path: $path');
-    debugPrint('Database name: $_databaseName');
-    debugPrint('Database version: $_databaseVersion');
 
     return await openDatabase(
       path,
@@ -69,8 +70,6 @@ class DatabaseHelper {
 
   // Create database tables
   Future<void> _onCreate(Database db, int version) async {
-    debugPrint('Creating database tables...');
-
     // Users table
     await db.execute('''
       CREATE TABLE $_usersTable (
@@ -89,7 +88,6 @@ class DatabaseHelper {
         updatedAt TEXT NOT NULL
       )
     ''');
-    debugPrint('Users table created successfully');
 
     // Blood inventory table
     await db.execute('''
@@ -99,12 +97,12 @@ class DatabaseHelper {
         quantity INTEGER NOT NULL,
         reservedQuantity INTEGER DEFAULT 0,
         status TEXT NOT NULL,
+        expiryDate TEXT,
         lastUpdated TEXT NOT NULL,
         createdBy INTEGER,
         notes TEXT
       )
     ''');
-    debugPrint('Blood inventory table created successfully');
 
     // Donations table
     await db.execute('''
@@ -116,10 +114,10 @@ class DatabaseHelper {
         donationDate TEXT NOT NULL,
         status TEXT NOT NULL,
         notes TEXT,
-        createdBy INTEGER
+        createdBy INTEGER,
+        healthCheck TEXT
       )
     ''');
-    debugPrint('Donations table created successfully');
 
     // Blood requests table
     await db.execute('''
@@ -132,10 +130,15 @@ class DatabaseHelper {
         requestDate TEXT NOT NULL,
         status TEXT NOT NULL,
         notes TEXT,
-        createdBy INTEGER
+        createdBy INTEGER,
+        patientName TEXT,
+        hospital TEXT,
+        doctorName TEXT,
+        contactNumber TEXT,
+        approvedBy INTEGER,
+        approvedAt TEXT
       )
     ''');
-    debugPrint('Blood requests table created successfully');
 
     // Notifications table
     await db.execute('''
@@ -145,11 +148,12 @@ class DatabaseHelper {
         title TEXT NOT NULL,
         message TEXT NOT NULL,
         type TEXT NOT NULL,
+        priority TEXT DEFAULT 'Normal',
         isRead INTEGER DEFAULT 0,
-        createdAt TEXT NOT NULL
+        createdAt TEXT NOT NULL,
+        payload TEXT
       )
     ''');
-    debugPrint('Notifications table created successfully');
 
     // User sessions table
     await db.execute('''
@@ -161,7 +165,6 @@ class DatabaseHelper {
         createdAt TEXT NOT NULL
       )
     ''');
-    debugPrint('User sessions table created successfully');
 
     // Audit log table
     await db.execute('''
@@ -178,7 +181,6 @@ class DatabaseHelper {
         userAgent TEXT
       )
     ''');
-    debugPrint('Audit log table created successfully');
 
     // Insert default admin user
     await _insertDefaultAdmin(db);
@@ -186,58 +188,75 @@ class DatabaseHelper {
 
   // Update database schema
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    debugPrint('Upgrading database from version $oldVersion to $newVersion');
-    
-    if (oldVersion < 2) {
-      debugPrint('Upgrading to version 2...');
-      // Add new columns or tables for version 2
+    for (int i = oldVersion + 1; i <= newVersion; i++) {
+      await _upgradeToVersion(db, i);
     }
-    
-    if (oldVersion < 3) {
-      debugPrint('Upgrading to version 3...');
-      // Add new columns or tables for version 3
+  }
+
+  Future<void> _upgradeToVersion(Database db, int version) async {
+    switch (version) {
+      case 2:
+        // Add new columns or tables for version 2
+        break;
+      case 3:
+        // Add new columns or tables for version 3
+        break;
+      case 4:
+        try {
+          // Update blood_requests table with new columns
+          await db.execute(
+            'ALTER TABLE $_requestsTable ADD COLUMN patientName TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE $_requestsTable ADD COLUMN hospital TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE $_requestsTable ADD COLUMN doctorName TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE $_requestsTable ADD COLUMN contactNumber TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE $_requestsTable ADD COLUMN approvedBy INTEGER',
+          );
+          await db.execute(
+            'ALTER TABLE $_requestsTable ADD COLUMN approvedAt TEXT',
+          );
+
+          // Update notifications table with new columns
+          await db.execute(
+            'ALTER TABLE $_notificationsTable ADD COLUMN priority TEXT DEFAULT "Normal"',
+          );
+          await db.execute(
+            'ALTER TABLE $_notificationsTable ADD COLUMN payload TEXT',
+          );
+
+          // Recreate audit_log table
+          await db.execute('DROP TABLE IF EXISTS $_auditLogTable');
+          await db.execute('''
+            CREATE TABLE $_auditLogTable (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              userId INTEGER,
+              action TEXT NOT NULL,
+              tableName TEXT,
+              recordId INTEGER,
+              oldValues TEXT,
+              newValues TEXT,
+              timestamp TEXT NOT NULL,
+              ipAddress TEXT,
+              userAgent TEXT
+            )
+          ''');
+        } catch (e) {
+          // Error updating table schema
+        }
+        break;
     }
-    
-    if (oldVersion < 4) {
-      debugPrint('Upgrading to version 4...');
-      // Update audit_log table schema for version 4
-      try {
-        debugPrint('Updating audit_log table schema for version 4...');
-        
-        // Drop the old audit_log table if it exists
-        await db.execute('DROP TABLE IF EXISTS $_auditLogTable');
-        
-        // Create the new audit_log table with correct schema
-        await db.execute('''
-          CREATE TABLE $_auditLogTable (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            userId INTEGER,
-            action TEXT NOT NULL,
-            tableName TEXT,
-            recordId INTEGER,
-            oldValues TEXT,
-            newValues TEXT,
-            timestamp TEXT NOT NULL,
-            ipAddress TEXT,
-            userAgent TEXT
-          )
-        ''');
-        
-        debugPrint('Audit_log table schema updated successfully for version 4');
-      } catch (e) {
-        debugPrint('Error updating audit_log table schema: $e');
-      }
-    }
-    
-    debugPrint('Database upgrade completed from version $oldVersion to $newVersion');
   }
 
   // Insert default admin user
   Future<void> _insertDefaultAdmin(Database db) async {
     try {
-      debugPrint('Creating default admin user...');
-
-      // Check if admin user already exists
       final existingAdmin = await db.query(
         _usersTable,
         where: 'email = ?',
@@ -246,7 +265,6 @@ class DatabaseHelper {
       );
 
       if (existingAdmin.isNotEmpty) {
-        debugPrint('Admin user already exists');
         return;
       }
 
@@ -264,24 +282,93 @@ class DatabaseHelper {
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      final id = await db.insert(_usersTable, adminUser);
-      debugPrint('Admin user created with ID: $id');
+      await db.insert(_usersTable, adminUser);
+
+      // Insert sample donor and receiver users
+      await _insertSampleUsers(db);
 
       // Insert sample blood inventory data
       await _insertSampleBloodInventory(db);
     } catch (e) {
-      debugPrint('Error creating admin user: $e');
+      // Error creating admin user
+    }
+  }
+
+  // Insert sample users (donor and receiver)
+  Future<void> _insertSampleUsers(Database db) async {
+    try {
+      // Sample donor user
+      final donorUser = {
+        'name': 'John Donor',
+        'email': 'donor@bloodbank.com',
+        'password': _hashPassword('donor123'),
+        'userType': 'Donor',
+        'bloodGroup': 'O+',
+        'age': 28,
+        'contactNumber': '+1234567891',
+        'address': '123 Donor Street, City',
+        'isActive': 1,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      // Sample receiver user
+      final receiverUser = {
+        'name': 'Jane Receiver',
+        'email': 'receiver@bloodbank.com',
+        'password': _hashPassword('receiver123'),
+        'userType': 'Receiver',
+        'bloodGroup': 'A+',
+        'age': 35,
+        'contactNumber': '+1234567892',
+        'address': '456 Receiver Avenue, City',
+        'isActive': 1,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      // Check if users already exist
+      final existingDonor = await db.query(
+        _usersTable,
+        where: 'email = ?',
+        whereArgs: ['donor@bloodbank.com'],
+        limit: 1,
+      );
+
+      final existingReceiver = await db.query(
+        _usersTable,
+        where: 'email = ?',
+        whereArgs: ['receiver@bloodbank.com'],
+        limit: 1,
+      );
+
+      if (existingDonor.isEmpty) {
+        await db.insert(_usersTable, donorUser);
+      }
+
+      if (existingReceiver.isEmpty) {
+        await db.insert(_usersTable, receiverUser);
+      }
+    } catch (e) {
+      // Error creating sample users
     }
   }
 
   // Insert sample blood inventory data
   Future<void> _insertSampleBloodInventory(Database db) async {
     try {
-      debugPrint('Adding sample blood inventory data...');
-      
       final bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
       final quantities = [150, 75, 120, 45, 60, 30, 180, 90];
-      final statuses = ['Available', 'Available', 'Available', 'Available', 'Available', 'Available', 'Available', 'Available'];
+      final statuses = [
+        'Available',
+        'Available',
+        'Available',
+        'Available',
+        'Available',
+        'Available',
+        'Available',
+        'Available',
+      ];
 
       for (int i = 0; i < bloodGroups.length; i++) {
         final inventory = {
@@ -296,10 +383,8 @@ class DatabaseHelper {
 
         await db.insert(_bloodInventoryTable, inventory);
       }
-      
-      debugPrint('Sample blood inventory data added successfully');
     } catch (e) {
-      debugPrint('Error adding sample blood inventory: $e');
+      // Error adding sample blood inventory
     }
   }
 
@@ -313,32 +398,62 @@ class DatabaseHelper {
   // Initialize database (public method)
   static Future<void> initializeDatabase() async {
     if (_isInitialized) {
-      debugPrint('Database already initialized');
       return;
     }
 
     try {
-      debugPrint('Starting database initialization...');
-      debugPrint('Database version: $_databaseVersion');
-      
-      // Initialize database factory for desktop platforms
       await initializeDatabaseFactory();
-      
+
       final dbHelper = DatabaseHelper();
       await dbHelper.database;
       _isInitialized = true;
-      debugPrint('Database initialization completed successfully');
-      
-      // Verify database structure
+
+      // Check database structure and create admin user if needed
       final structureCheck = await dbHelper.checkDatabaseStructure();
       if (structureCheck['status'] == 'success') {
-        debugPrint('Database structure verification passed');
-      } else {
-        debugPrint('Database structure verification failed: ${structureCheck['error']}');
+        await createAdminUser();
       }
     } catch (e) {
-      debugPrint('Database initialization error: $e');
+      debugPrint('Error initializing database: $e');
       rethrow;
+    }
+  }
+
+  // Create admin user (public method)
+  static Future<bool> createAdminUser() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final db = await dbHelper.database;
+
+      final existingAdmin = await db.query(
+        _usersTable,
+        where: 'email = ?',
+        whereArgs: ['admin@bloodbank.com'],
+        limit: 1,
+      );
+
+      if (existingAdmin.isNotEmpty) {
+        return true; // Admin already exists
+      }
+
+      final adminUser = {
+        'name': 'System Administrator',
+        'email': 'admin@bloodbank.com',
+        'password': _hashPassword('admin123'),
+        'userType': 'Admin',
+        'bloodGroup': 'N/A',
+        'age': 30,
+        'contactNumber': '+1234567890',
+        'address': 'System Address',
+        'isActive': 1,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      final id = await db.insert(_usersTable, adminUser);
+      return id > 0;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -356,7 +471,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error getting all users: $e');
       return [];
     }
   }
@@ -368,7 +482,6 @@ class DatabaseHelper {
       final result = await db.query(_usersTable, orderBy: 'createdAt DESC');
       return result;
     } catch (e) {
-      debugPrint('Error getting all users including inactive: $e');
       return [];
     }
   }
@@ -376,9 +489,7 @@ class DatabaseHelper {
   // Get user by email
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
     try {
-      debugPrint('🔍 Looking up user by email: $email');
       final db = await database;
-      debugPrint('✅ Database connection established for user lookup');
 
       final result = await db.query(
         _usersTable,
@@ -386,28 +497,17 @@ class DatabaseHelper {
         whereArgs: [email, 1],
       );
 
-      debugPrint('📊 Query result: ${result.length} rows found');
-
       if (result.isNotEmpty) {
-        debugPrint(
-            '✅ User found: ${result.first['name']} (${result.first['userType']})');
         return result.first;
       } else {
-        debugPrint('❌ User not found for email: $email');
-        // Let's check if the user exists but is inactive
         final allUsers = await db.query(
           _usersTable,
           where: 'email = ?',
           whereArgs: [email],
         );
-        if (allUsers.isNotEmpty) {
-          debugPrint(
-              '⚠️ User exists but is inactive: ${allUsers.first['name']}');
-        }
         return null;
       }
     } catch (e) {
-      debugPrint('❌ Error getting user by email: $e');
       return null;
     }
   }
@@ -423,38 +523,30 @@ class DatabaseHelper {
       );
       return result.isNotEmpty ? result.first : null;
     } catch (e) {
-      debugPrint('Error getting user by ID: $e');
       return null;
     }
   }
 
   // Authenticate user
   Future<Map<String, dynamic>?> authenticateUser(
-      String email, String password) async {
+    String email,
+    String password,
+  ) async {
     try {
-      debugPrint('🔐 Attempting authentication for email: $email');
       final user = await getUserByEmail(email);
       if (user != null) {
-        debugPrint('✅ User found: ${user['name']} (${user['userType']})');
         final hashedPassword = _hashPassword(password);
         final passwordMatch = user['password'] == hashedPassword;
-        debugPrint('🔑 Password match: $passwordMatch');
 
         if (passwordMatch) {
-          debugPrint('✅ Authentication successful');
-          // Update last login
-          await updateUser(
-              user['id'], {'lastLogin': DateTime.now().toIso8601String()});
+          await updateUser(user['id'], {
+            'lastLogin': DateTime.now().toIso8601String(),
+          });
           return user;
-        } else {
-          debugPrint('❌ Password mismatch');
         }
-      } else {
-        debugPrint('❌ User not found for email: $email');
       }
       return null;
     } catch (e) {
-      debugPrint('❌ Authentication error: $e');
       return null;
     }
   }
@@ -462,15 +554,10 @@ class DatabaseHelper {
   // Insert new user
   Future<bool> insertUser(Map<String, dynamic> userData) async {
     try {
-      debugPrint('🔧 Attempting to create user: ${userData['email']}');
       final db = await database;
-      debugPrint('✅ Database connection established for user creation');
 
-      // Hash password
       final hashedPassword = _hashPassword(userData['password']);
-      debugPrint('🔐 Password hashed successfully');
 
-      // Prepare user data
       final user = {
         'name': userData['name'],
         'email': userData['email'],
@@ -485,30 +572,19 @@ class DatabaseHelper {
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      debugPrint('📝 User data prepared: ${user['name']} (${user['email']})');
-      debugPrint('📝 User type: ${user['userType']}');
-      debugPrint('📝 Blood group: ${user['bloodGroup']}');
-
       final id = await db.insert(_usersTable, user);
-      debugPrint('✅ User created with ID: $id');
 
-      // Verify the insertion
-      final verifyUser = await getUserByEmail(userData['email']);
-      if (verifyUser != null) {
-        debugPrint('✅ User verification successful: ${verifyUser['name']}');
-      } else {
-        debugPrint(
-            '❌ User verification failed - user not found after insertion');
-      }
-
-      // Log the action
       await _logAuditAction(
-          null, 'CREATE', _usersTable, id, null, jsonEncode(user));
+        null,
+        'CREATE',
+        _usersTable,
+        id,
+        null,
+        jsonEncode(user),
+      );
 
       return id > 0;
     } catch (e) {
-      debugPrint('❌ Error inserting user: $e');
-      debugPrint('❌ Error details: ${e.toString()}');
       return false;
     }
   }
@@ -518,11 +594,9 @@ class DatabaseHelper {
     try {
       final db = await database;
 
-      // Get old values for audit log
       final oldUser = await getUserById(userId);
       final oldValues = oldUser != null ? jsonEncode(oldUser) : null;
 
-      // Handle password update
       if (userData.containsKey('password')) {
         userData['password'] = _hashPassword(userData['password']);
       }
@@ -537,14 +611,18 @@ class DatabaseHelper {
       );
 
       if (count > 0) {
-        // Log the action
-        await _logAuditAction(userId, 'UPDATE', _usersTable, userId, oldValues,
-            jsonEncode(userData));
+        await _logAuditAction(
+          userId,
+          'UPDATE',
+          _usersTable,
+          userId,
+          oldValues,
+          jsonEncode(userData),
+        );
       }
 
       return count > 0;
     } catch (e) {
-      debugPrint('Error updating user: $e');
       return false;
     }
   }
@@ -561,14 +639,18 @@ class DatabaseHelper {
       );
 
       if (count > 0) {
-        // Log the action
         await _logAuditAction(
-            userId, 'DELETE', _usersTable, userId, null, null);
+          userId,
+          'DELETE',
+          _usersTable,
+          userId,
+          null,
+          null,
+        );
       }
 
       return count > 0;
     } catch (e) {
-      debugPrint('Error deleting user: $e');
       return false;
     }
   }
@@ -583,7 +665,6 @@ class DatabaseHelper {
       final success = await updateUser(userId, {'isActive': newStatus});
       return success;
     } catch (e) {
-      debugPrint('Error toggling user status: $e');
       return false;
     }
   }
@@ -600,7 +681,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error getting users by type: $e');
       return [];
     }
   }
@@ -611,7 +691,6 @@ class DatabaseHelper {
       final user = await getUserByEmail(email);
       return user != null;
     } catch (e) {
-      debugPrint('Error checking email existence: $e');
       return false;
     }
   }
@@ -633,7 +712,6 @@ class DatabaseHelper {
       final success = await updateUser(userId, {'password': newHashedPassword});
       return success;
     } catch (e) {
-      debugPrint('Error changing password: $e');
       return false;
     }
   }
@@ -645,7 +723,6 @@ class DatabaseHelper {
       final success = await updateUser(userId, {'password': newHashedPassword});
       return success;
     } catch (e) {
-      debugPrint('Error resetting password: $e');
       return false;
     }
   }
@@ -662,7 +739,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error getting blood inventory: $e');
       return [];
     }
   }
@@ -680,7 +756,6 @@ class DatabaseHelper {
       );
       return result.isNotEmpty ? result.first : null;
     } catch (e) {
-      debugPrint('Error getting blood inventory by group: $e');
       return null;
     }
   }
@@ -690,14 +765,14 @@ class DatabaseHelper {
     try {
       final db = await database;
 
-      // Get old values for audit log
       final oldInventory = await db.query(
         _bloodInventoryTable,
         where: 'id = ?',
         whereArgs: [id],
       );
-      final oldValues =
-          oldInventory.isNotEmpty ? jsonEncode(oldInventory.first) : null;
+      final oldValues = oldInventory.isNotEmpty
+          ? jsonEncode(oldInventory.first)
+          : null;
 
       data['lastUpdated'] = DateTime.now().toIso8601String();
 
@@ -709,14 +784,18 @@ class DatabaseHelper {
       );
 
       if (count > 0) {
-        // Log the action
-        await _logAuditAction(null, 'UPDATE', _bloodInventoryTable, id,
-            oldValues, jsonEncode(data));
+        await _logAuditAction(
+          null,
+          'UPDATE',
+          _bloodInventoryTable,
+          id,
+          oldValues,
+          jsonEncode(data),
+        );
       }
 
       return count > 0;
     } catch (e) {
-      debugPrint('Error updating blood inventory: $e');
       return false;
     }
   }
@@ -740,14 +819,18 @@ class DatabaseHelper {
       final id = await db.insert(_bloodInventoryTable, inventory);
 
       if (id > 0) {
-        // Log the action
-        await _logAuditAction(null, 'CREATE', _bloodInventoryTable, id, null,
-            jsonEncode(inventory));
+        await _logAuditAction(
+          null,
+          'CREATE',
+          _bloodInventoryTable,
+          id,
+          null,
+          jsonEncode(inventory),
+        );
       }
 
       return id > 0;
     } catch (e) {
-      debugPrint('Error adding blood inventory: $e');
       return false;
     }
   }
@@ -763,14 +846,18 @@ class DatabaseHelper {
       );
 
       if (count > 0) {
-        // Log the action
         await _logAuditAction(
-            null, 'DELETE', _bloodInventoryTable, id, null, null);
+          null,
+          'DELETE',
+          _bloodInventoryTable,
+          id,
+          null,
+          null,
+        );
       }
 
       return count > 0;
     } catch (e) {
-      debugPrint('Error deleting blood inventory: $e');
       return false;
     }
   }
@@ -787,7 +874,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error searching blood inventory: $e');
       return [];
     }
   }
@@ -806,7 +892,6 @@ class DatabaseHelper {
 
       return summary;
     } catch (e) {
-      debugPrint('Error getting blood inventory summary: $e');
       return {};
     }
   }
@@ -828,7 +913,6 @@ class DatabaseHelper {
       });
       return success;
     } catch (e) {
-      debugPrint('Error reserving blood units: $e');
       return false;
     }
   }
@@ -840,15 +924,16 @@ class DatabaseHelper {
       if (inventory == null) return false;
 
       final reservedQuantity = inventory['reservedQuantity'] as int;
-      final newReservedQuantity =
-          (reservedQuantity - quantity).clamp(0, reservedQuantity);
+      final newReservedQuantity = (reservedQuantity - quantity).clamp(
+        0,
+        reservedQuantity,
+      );
 
       final success = await updateBloodInventory(inventory['id'], {
         'reservedQuantity': newReservedQuantity,
       });
       return success;
     } catch (e) {
-      debugPrint('Error releasing blood units: $e');
       return false;
     }
   }
@@ -872,26 +957,33 @@ class DatabaseHelper {
 
       final id = await db.insert(_donationsTable, donation);
 
-      // Update blood inventory
       if (id > 0) {
         await _updateBloodInventoryAfterDonation(
-            donationData['bloodGroup'], donationData['quantity']);
+          donationData['bloodGroup'],
+          donationData['quantity'],
+        );
 
-        // Log the action
-        await _logAuditAction(donationData['donorId'], 'CREATE',
-            _donationsTable, id, null, jsonEncode(donation));
+        await _logAuditAction(
+          donationData['donorId'],
+          'CREATE',
+          _donationsTable,
+          id,
+          null,
+          jsonEncode(donation),
+        );
       }
 
       return id > 0;
     } catch (e) {
-      debugPrint('Error adding donation: $e');
       return false;
     }
   }
 
   // Update blood inventory after donation
   Future<void> _updateBloodInventoryAfterDonation(
-      String bloodGroup, int quantity) async {
+    String bloodGroup,
+    int quantity,
+  ) async {
     try {
       final inventory = await getBloodInventoryByGroup(bloodGroup);
       if (inventory != null) {
@@ -901,7 +993,7 @@ class DatabaseHelper {
         });
       }
     } catch (e) {
-      debugPrint('Error updating blood inventory after donation: $e');
+      // Error updating blood inventory after donation
     }
   }
 
@@ -917,7 +1009,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error getting donations by donor: $e');
       return [];
     }
   }
@@ -932,7 +1023,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error getting all donations: $e');
       return [];
     }
   }
@@ -951,24 +1041,28 @@ class DatabaseHelper {
         'urgency': requestData['urgency'],
         'requestDate': DateTime.now().toIso8601String(),
         'status': requestData['status'] ?? 'Pending',
-        'patientName': requestData['patientName'],
-        'hospital': requestData['hospital'],
-        'doctorName': requestData['doctorName'],
-        'contactNumber': requestData['contactNumber'],
-        'notes': requestData['notes'],
+        'patientName': requestData['patientName'] ?? '',
+        'hospital': requestData['hospital'] ?? '',
+        'doctorName': requestData['doctorName'] ?? '',
+        'contactNumber': requestData['contactNumber'] ?? '',
+        'notes': requestData['notes'] ?? '',
       };
 
       final id = await db.insert(_requestsTable, request);
 
       if (id > 0) {
-        // Log the action
-        await _logAuditAction(requestData['requesterId'], 'CREATE',
-            _requestsTable, id, null, jsonEncode(request));
+        await _logAuditAction(
+          requestData['requesterId'],
+          'CREATE',
+          _requestsTable,
+          id,
+          null,
+          jsonEncode(request),
+        );
       }
 
       return id > 0;
     } catch (e) {
-      debugPrint('Error adding blood request: $e');
       return false;
     }
   }
@@ -987,7 +1081,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error getting requests by requester: $e');
       return [];
     }
   }
@@ -1002,7 +1095,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error getting all blood requests: $e');
       return [];
     }
   }
@@ -1023,21 +1115,28 @@ class DatabaseHelper {
       );
 
       if (count > 0) {
-        // Log the action
-        await _logAuditAction(approvedBy, 'UPDATE', _requestsTable, requestId,
-            null, jsonEncode({'status': 'Approved'}));
+        await _logAuditAction(
+          approvedBy,
+          'UPDATE',
+          _requestsTable,
+          requestId,
+          null,
+          jsonEncode({'status': 'Approved'}),
+        );
       }
 
       return count > 0;
     } catch (e) {
-      debugPrint('Error approving blood request: $e');
       return false;
     }
   }
 
   // Reject blood request
   Future<bool> rejectBloodRequest(
-      int requestId, int rejectedBy, String reason) async {
+    int requestId,
+    int rejectedBy,
+    String reason,
+  ) async {
     try {
       final db = await database;
       final requestData = await getBloodRequestById(requestId);
@@ -1056,14 +1155,18 @@ class DatabaseHelper {
       );
 
       if (count > 0) {
-        // Log the action
-        await _logAuditAction(rejectedBy, 'UPDATE', _requestsTable, requestId,
-            null, jsonEncode({'status': 'Rejected'}));
+        await _logAuditAction(
+          rejectedBy,
+          'UPDATE',
+          _requestsTable,
+          requestId,
+          null,
+          jsonEncode({'status': 'Rejected'}),
+        );
       }
 
       return count > 0;
     } catch (e) {
-      debugPrint('Error rejecting blood request: $e');
       return false;
     }
   }
@@ -1079,7 +1182,6 @@ class DatabaseHelper {
       );
       return result.isNotEmpty ? result.first : null;
     } catch (e) {
-      debugPrint('Error getting blood request by ID: $e');
       return null;
     }
   }
@@ -1107,7 +1209,6 @@ class DatabaseHelper {
       final id = await db.insert(_notificationsTable, notification);
       return id > 0;
     } catch (e) {
-      debugPrint('Error adding notification: $e');
       return false;
     }
   }
@@ -1124,7 +1225,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error getting notifications by user: $e');
       return [];
     }
   }
@@ -1141,7 +1241,6 @@ class DatabaseHelper {
       );
       return count > 0;
     } catch (e) {
-      debugPrint('Error marking notification as read: $e');
       return false;
     }
   }
@@ -1156,7 +1255,6 @@ class DatabaseHelper {
       );
       return result.first['count'] as int;
     } catch (e) {
-      debugPrint('Error getting unread notifications count: $e');
       return 0;
     }
   }
@@ -1172,7 +1270,6 @@ class DatabaseHelper {
       );
       return count > 0;
     } catch (e) {
-      debugPrint('Error clearing notifications for user: $e');
       return false;
     }
   }
@@ -1181,20 +1278,24 @@ class DatabaseHelper {
 
   // Create user session
   Future<bool> createUserSession(
-      int userId, String sessionToken, String deviceInfo) async {
+    int userId,
+    String sessionToken,
+    String deviceInfo,
+  ) async {
     try {
       final db = await database;
       final session = {
         'userId': userId,
         'sessionToken': sessionToken,
-        'expiresAt': DateTime.now().add(const Duration(days: 7)).toIso8601String(), // 7 days expiry
+        'expiresAt': DateTime.now()
+            .add(const Duration(days: 7))
+            .toIso8601String(), // 7 days expiry
         'createdAt': DateTime.now().toIso8601String(),
       };
 
       final id = await db.insert(_userSessionsTable, session);
       return id > 0;
     } catch (e) {
-      debugPrint('Error creating user session: $e');
       return false;
     }
   }
@@ -1211,7 +1312,6 @@ class DatabaseHelper {
       );
       return count > 0;
     } catch (e) {
-      debugPrint('Error updating session activity: $e');
       return false;
     }
   }
@@ -1228,7 +1328,6 @@ class DatabaseHelper {
       );
       return count > 0;
     } catch (e) {
-      debugPrint('Error invalidating user session: $e');
       return false;
     }
   }
@@ -1246,7 +1345,6 @@ class DatabaseHelper {
       );
       return result.isNotEmpty ? result.first : null;
     } catch (e) {
-      debugPrint('Error getting user session: $e');
       return null;
     }
   }
@@ -1278,7 +1376,7 @@ class DatabaseHelper {
 
       await db.insert(_auditLogTable, auditLog);
     } catch (e) {
-      debugPrint('Error logging audit action: $e');
+      // Error logging audit action
     }
   }
 
@@ -1320,7 +1418,6 @@ class DatabaseHelper {
       );
       return result;
     } catch (e) {
-      debugPrint('Error getting audit log: $e');
       return [];
     }
   }
@@ -1332,7 +1429,6 @@ class DatabaseHelper {
     try {
       final db = await database;
 
-      // Get user counts
       final userCounts = await db.rawQuery('''
         SELECT userType, COUNT(*) as count 
         FROM $_usersTable 
@@ -1340,20 +1436,17 @@ class DatabaseHelper {
         GROUP BY userType
       ''');
 
-      // Get blood inventory summary
       final bloodSummary = await db.rawQuery('''
         SELECT SUM(quantity) as totalUnits, COUNT(*) as bloodGroups
         FROM $_bloodInventoryTable
       ''');
 
-      // Get recent donations
       final recentDonations = await db.rawQuery('''
         SELECT COUNT(*) as count 
         FROM $_donationsTable 
         WHERE donationDate >= datetime('now', '-7 days')
       ''');
 
-      // Get pending requests
       final pendingRequests = await db.rawQuery('''
         SELECT COUNT(*) as count 
         FROM $_requestsTable 
@@ -1367,7 +1460,6 @@ class DatabaseHelper {
         'pendingRequests': pendingRequests.first['count'],
       };
     } catch (e) {
-      debugPrint('Error getting dashboard statistics: $e');
       return {};
     }
   }
@@ -1377,7 +1469,6 @@ class DatabaseHelper {
     try {
       final db = await database;
 
-      // Get total units by blood group
       final bloodGroupStats = await db.rawQuery('''
         SELECT bloodGroup, SUM(quantity) as totalUnits, SUM(reservedQuantity) as reservedUnits
         FROM $_bloodInventoryTable
@@ -1385,7 +1476,6 @@ class DatabaseHelper {
         ORDER BY bloodGroup
       ''');
 
-      // Get low stock items
       final lowStockItems = await db.rawQuery('''
         SELECT bloodGroup, quantity, reservedQuantity
         FROM $_bloodInventoryTable
@@ -1393,7 +1483,6 @@ class DatabaseHelper {
         ORDER BY (quantity - reservedQuantity) ASC
       ''');
 
-      // Get expiring items
       final expiringItems = await db.rawQuery('''
         SELECT bloodGroup, quantity, expiryDate
         FROM $_bloodInventoryTable
@@ -1408,7 +1497,6 @@ class DatabaseHelper {
         'expiringItems': expiringItems,
       };
     } catch (e) {
-      debugPrint('Error getting blood inventory statistics: $e');
       return {};
     }
   }
@@ -1418,7 +1506,6 @@ class DatabaseHelper {
     try {
       final db = await database;
 
-      // Get recent logins
       final recentLogins = await db.rawQuery('''
         SELECT u.name, u.email, u.lastLogin
         FROM $_usersTable u
@@ -1427,14 +1514,15 @@ class DatabaseHelper {
         LIMIT 10
       ''');
 
-      // Get active sessions
-      final activeSessions = await db.rawQuery('''
+      final activeSessions = await db.rawQuery(
+        '''
         SELECT COUNT(*) as count
         FROM $_userSessionsTable
         WHERE expiresAt > ?
-      ''', [DateTime.now().toIso8601String()]);
+      ''',
+        [DateTime.now().toIso8601String()],
+      );
 
-      // Get user registrations by month
       final registrationsByMonth = await db.rawQuery('''
         SELECT strftime('%Y-%m', createdAt) as month, COUNT(*) as count
         FROM $_usersTable
@@ -1449,7 +1537,6 @@ class DatabaseHelper {
         'registrationsByMonth': registrationsByMonth,
       };
     } catch (e) {
-      debugPrint('Error getting user activity statistics: $e');
       return {};
     }
   }
@@ -1458,65 +1545,81 @@ class DatabaseHelper {
   Future<void> close() async {
     try {
       await _database?.close();
-      debugPrint('Database closed successfully');
     } catch (e) {
-      debugPrint('Error closing database: $e');
+      // Error closing database
     }
   }
 
   // Check database structure
   Future<Map<String, dynamic>> checkDatabaseStructure() async {
     try {
-      debugPrint('🔍 Checking database structure...');
       final db = await database;
-      
-      // Check if users table exists
-      final tables = await db.query('sqlite_master', 
-        where: 'type = ? AND name = ?', 
-        whereArgs: ['table', _usersTable]);
-      
+
+      final tables = await db.query(
+        'sqlite_master',
+        where: 'type = ? AND name = ?',
+        whereArgs: ['table', _usersTable],
+      );
+
       if (tables.isEmpty) {
-        debugPrint('❌ Users table not found');
         return {
           'status': 'error',
           'error': 'Users table not found',
-          'message': 'Database structure is incomplete'
+          'message': 'Database structure is incomplete',
         };
       }
-      
-      // Check table columns
+
       final columns = await db.rawQuery('PRAGMA table_info($_usersTable)');
       final requiredColumns = [
-        'id', 'name', 'email', 'password', 'userType', 
-        'bloodGroup', 'age', 'contactNumber', 'address', 
-        'isActive', 'lastLogin', 'createdAt', 'updatedAt'
+        'id',
+        'name',
+        'email',
+        'password',
+        'userType',
+        'bloodGroup',
+        'age',
+        'contactNumber',
+        'address',
+        'isActive',
+        'lastLogin',
+        'createdAt',
+        'updatedAt',
       ];
-      
-      final existingColumns = columns.map((col) => col['name'] as String).toList();
-      final missingColumns = requiredColumns.where((col) => !existingColumns.contains(col)).toList();
-      
+
+      final existingColumns = columns
+          .map((col) => col['name'] as String)
+          .toList();
+      final missingColumns = requiredColumns
+          .where((col) => !existingColumns.contains(col))
+          .toList();
+
       if (missingColumns.isNotEmpty) {
-        debugPrint('❌ Missing columns: $missingColumns');
         return {
           'status': 'error',
           'error': 'Missing columns: $missingColumns',
-          'message': 'Database structure is incomplete'
+          'message': 'Database structure is incomplete',
         };
       }
-      
-      debugPrint('✅ Database structure check passed');
+
       return {
         'status': 'success',
         'message': 'Database structure is correct',
-        'tables': ['users', 'blood_inventory', 'donations', 'blood_requests', 'notifications', 'user_sessions', 'audit_log'],
-        'columns': existingColumns
+        'tables': [
+          'users',
+          'blood_inventory',
+          'donations',
+          'blood_requests',
+          'notifications',
+          'user_sessions',
+          'audit_log',
+        ],
+        'columns': existingColumns,
       };
     } catch (e) {
-      debugPrint('❌ Database structure check failed: $e');
       return {
         'status': 'error',
         'error': e.toString(),
-        'message': 'Database structure check failed'
+        'message': 'Database structure check failed',
       };
     }
   }

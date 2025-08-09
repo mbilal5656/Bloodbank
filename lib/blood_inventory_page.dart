@@ -21,25 +21,21 @@ class _BloodInventoryPageState extends State<BloodInventoryPage> {
 
   Future<void> _loadBloodInventory() async {
     try {
-      debugPrint('🩸 Blood inventory page: Loading inventory data...');
       final dataService = DataService();
       final inventory = await dataService.getBloodInventorySummary();
 
       if (inventory.isNotEmpty) {
-        debugPrint('✅ Blood inventory loaded: ${inventory.length} items');
         setState(() {
           _bloodInventory = inventory;
           _isLoading = false;
         });
       } else {
-        debugPrint('⚠️ No blood inventory data found');
         setState(() {
           _bloodInventory = {};
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('❌ Error loading blood inventory: $e');
       setState(() {
         _bloodInventory = {};
         _isLoading = false;
