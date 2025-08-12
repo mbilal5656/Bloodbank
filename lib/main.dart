@@ -69,7 +69,7 @@ class BloodBankApp extends StatelessWidget {
         return MaterialApp(
           title: 'Blood Bank Management System',
           debugShowCheckedModeBanner: false,
-          theme: ThemeManager.getThemeData(),
+          theme: themeProvider.getThemeData(context),
           home: const SplashScreen(),
           routes: {
             '/home': (context) => const HomePage(),

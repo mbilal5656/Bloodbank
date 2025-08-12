@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'app_theme.dart';
+import '../theme_manager.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const String _themeKey = 'theme_mode';
@@ -8,7 +8,13 @@ class ThemeProvider extends ChangeNotifier {
 
   bool get isDarkMode => _isDarkMode;
 
-  ThemeData get currentTheme => _isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme;
+  ThemeData get currentTheme => ThemeManager.getThemeData();
+  
+  AppTheme get currentAppTheme => ThemeManager.currentThemeData;
+
+  ThemeData getThemeData(BuildContext context) {
+    return ThemeManager.getThemeData();
+  }
 
   ThemeProvider() {
     _loadThemeMode();
@@ -33,4 +39,4 @@ class ThemeProvider extends ChangeNotifier {
     await prefs.setBool(_themeKey, _isDarkMode);
     notifyListeners();
   }
-} 
+}

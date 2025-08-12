@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'main.dart' show UserSession, NavigationUtils;
 import 'session_manager.dart';
 import 'services/data_service.dart';
 import 'theme_manager.dart';
 import 'theme_selection_page.dart';
+import 'theme/theme_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -67,7 +69,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildThemeSelector() {
-    final currentTheme = ThemeManager.currentThemeData;
+    final currentTheme = context.watch<ThemeProvider>().currentAppTheme;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
@@ -135,7 +137,8 @@ class _HomePageState extends State<HomePage> {
                   return GestureDetector(
                     onTap: () async {
                       await ThemeManager.changeTheme(themeKey);
-                      setState(() {});
+                      // Notify the theme provider to update
+                      context.read<ThemeProvider>().notifyListeners();
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -158,7 +161,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 5),
                           ),
@@ -246,8 +249,8 @@ class _HomePageState extends State<HomePage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              currentTheme.primaryColor.withOpacity(0.1),
-              currentTheme.secondaryColor.withOpacity(0.05),
+              currentTheme.primaryColor.withValues(alpha: 0.1),
+              currentTheme.secondaryColor.withValues(alpha: 0.05),
               currentTheme.backgroundColor,
             ],
           ),
@@ -276,7 +279,7 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: theme.primaryColor.withOpacity(0.3),
+                  color: theme.primaryColor.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -323,96 +326,132 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildModernHeader(AppTheme theme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 400;
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: theme.primaryColor,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.primaryColor.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Icon(Icons.bloodtype, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'BloodBank',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: theme.textColor,
-              ),
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            // Theme selector button
-            Container(
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: theme.surfaceColor,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                onPressed: _showThemeSelector,
-                icon: Icon(Icons.palette, color: theme.primaryColor, size: 20),
-                tooltip: 'Change Theme',
-              ),
-            ),
-            // Login button
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: theme.primaryColor,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.primaryColor.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: TextButton(
-                onPressed: () => NavigationUtils.navigateToLogin(context),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.login, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Login',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
+            Expanded(
+              child: Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.primaryColor.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                    child: Icon(Icons.bloodtype, color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      'BloodBank',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 20 : 24,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Theme selector button
+                Container(
+                  margin: const EdgeInsets.only(
+                    right: 6,
+                  ), // Reduced from 8 to 6
+                  decoration: BoxDecoration(
+                    color: theme.surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    onPressed: _showThemeSelector,
+                    icon: Icon(
+                      Icons.palette,
+                      color: theme.primaryColor,
+                      size: 18, // Reduced from 20 to 18
+                    ),
+                    tooltip: 'Change Theme',
+                    padding: const EdgeInsets.all(6), // Reduced from 8 to 6
+                    constraints: const BoxConstraints(
+                      minWidth: 36, // Reduced from 40 to 36
+                      minHeight: 36, // Reduced from 40 to 36
+                    ),
+                  ),
+                ),
+                // Login button
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen
+                        ? 10
+                        : 14, // Reduced from 12/16 to 10/14
+                    vertical: 6, // Reduced from 8 to 6
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.primaryColor,
+                    borderRadius: BorderRadius.circular(
+                      20,
+                    ), // Reduced from 25 to 20
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.primaryColor.withValues(alpha: 0.3),
+                        blurRadius: 8, // Reduced from 10 to 8
+                        offset: const Offset(0, 4), // Reduced from 5 to 4
+                      ),
+                    ],
+                  ),
+                  child: TextButton(
+                    onPressed: () => NavigationUtils.navigateToLogin(context),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.login,
+                          color: Colors.white,
+                          size: 16,
+                        ), // Reduced from 18 to 16
+                        if (!isSmallScreen) ...[
+                          const SizedBox(width: 6), // Reduced from 8 to 6
+                          Text(
+                            'Login',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14, // Reduced from 16 to 14
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -424,7 +463,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -436,7 +475,7 @@ class _HomePageState extends State<HomePage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.1),
+              color: theme.primaryColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -460,7 +499,7 @@ class _HomePageState extends State<HomePage> {
             'Join our community of donors and help save lives. Every drop counts in making a difference.',
             style: TextStyle(
               fontSize: 16,
-              color: theme.textColor.withOpacity(0.7),
+              color: theme.textColor.withValues(alpha: 0.7),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -495,23 +534,23 @@ class _HomePageState extends State<HomePage> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.1,
+        crossAxisSpacing: 12, // Reduced from 16 to 12
+        mainAxisSpacing: 12, // Reduced from 16 to 12
+        childAspectRatio: 1.0, // Reduced from 1.1 to 1.0 for more height
       ),
       itemCount: features.length,
       itemBuilder: (context, index) {
         final feature = features[index];
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16), // Reduced from 20 to 16
           decoration: BoxDecoration(
             color: theme.surfaceColor,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16), // Reduced from 20 to 16
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8, // Reduced from 10 to 8
+                offset: const Offset(0, 4), // Reduced from 5 to 4
               ),
             ],
           ),
@@ -519,33 +558,35 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 60,
-                height: 60,
+                width: 50, // Reduced from 60 to 50
+                height: 50, // Reduced from 60 to 50
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(15),
+                  color: theme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(
+                    12,
+                  ), // Reduced from 15 to 12
                 ),
                 child: Icon(
                   feature['icon'] as IconData,
                   color: theme.primaryColor,
-                  size: 30,
+                  size: 24, // Reduced from 30 to 24
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8), // Reduced from 12 to 8
               Text(
                 feature['title'] as String,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16, // Reduced from 18 to 16
                   fontWeight: FontWeight.bold,
                   color: theme.textColor,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4), // Reduced from 6 to 4
               Text(
                 feature['desc'] as String,
                 style: TextStyle(
-                  fontSize: 14,
-                  color: theme.textColor.withOpacity(0.7),
+                  fontSize: 13, // Reduced from 14 to 13
+                  color: theme.textColor.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -561,12 +602,15 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.8)],
+          colors: [
+            theme.primaryColor,
+            theme.primaryColor.withValues(alpha: 0.8),
+          ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: theme.primaryColor.withOpacity(0.3),
+            color: theme.primaryColor.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -588,7 +632,7 @@ class _HomePageState extends State<HomePage> {
             'Join our blood donation community today and help save lives.',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
             textAlign: TextAlign.center,
           ),
@@ -645,7 +689,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -679,7 +723,7 @@ class _HomePageState extends State<HomePage> {
                   'You are logged in as $_userType',
                   style: TextStyle(
                     fontSize: 14,
-                    color: theme.textColor.withOpacity(0.7),
+                    color: theme.textColor.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -801,7 +845,7 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -814,7 +858,7 @@ class _HomePageState extends State<HomePage> {
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.1),
+                        color: theme.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -863,7 +907,7 @@ class _HomePageState extends State<HomePage> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -890,7 +934,7 @@ class _HomePageState extends State<HomePage> {
                 'Access your personalized dashboard and manage blood bank operations efficiently.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: theme.textColor.withOpacity(0.7),
+                  color: theme.textColor.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 20),

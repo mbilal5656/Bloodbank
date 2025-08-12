@@ -14,7 +14,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
   @override
   Widget build(BuildContext context) {
     final currentTheme = ThemeManager.currentThemeData;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Choose Theme'),
@@ -58,7 +58,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                 ],
               ),
             ),
-            
+
             // Theme Grid
             Expanded(
               child: Padding(
@@ -75,13 +75,13 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                     final themeKey = ThemeManager.availableThemes[index];
                     final theme = ThemeManager.themes[themeKey]!;
                     final isSelected = _selectedTheme == themeKey;
-                    
+
                     return _buildThemeCard(theme, themeKey, isSelected);
                   },
                 ),
               ),
             ),
-            
+
             // Apply Button
             Container(
               padding: const EdgeInsets.all(16),
@@ -99,10 +99,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                   ),
                   child: const Text(
                     'Apply Theme',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -157,7 +154,10 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                     Container(
                       height: 24,
                       width: double.infinity,
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.primaryColor,
                         borderRadius: BorderRadius.circular(4),
@@ -173,7 +173,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                         ),
                       ),
                     ),
-                    
+
                     // Content Preview
                     Expanded(
                       child: Container(
@@ -216,7 +216,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                                 ],
                               ),
                             ),
-                            
+
                             // Button Preview
                             Container(
                               margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -234,13 +234,16 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                 ),
               ),
             ),
-            
+
             // Theme Name
             Expanded(
               flex: 1,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -274,11 +277,13 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
   void _applyTheme() async {
     try {
       await ThemeManager.changeTheme(_selectedTheme);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Theme changed to ${ThemeManager.themes[_selectedTheme]!.name}'),
+            content: Text(
+              'Theme changed to ${ThemeManager.themes[_selectedTheme]!.name}',
+            ),
             backgroundColor: ThemeManager.currentThemeData.primaryColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -286,7 +291,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
             ),
           ),
         );
-        
+
         // Navigate back
         Navigator.pop(context);
       }
