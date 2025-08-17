@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace 'com.example.bloodbank'
-    compileSdk 35
+    compileSdk 36
     
     buildFeatures {
         buildConfig true
@@ -42,7 +42,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.bloodbank"
-        minSdk 21
+        minSdkVersion 30  // Support Android 11 (API 30)
         targetSdk 34
         versionCode flutter.versionCode
         versionName flutter.versionName
@@ -53,7 +53,7 @@ android {
     }
     
     // Set a specific NDK version to avoid build issues
-    ndkVersion "25.1.8937393"
+    ndkVersion "27.0.12077973"
     
 
 

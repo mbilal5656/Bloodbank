@@ -48,7 +48,17 @@ class DataService {
   // Get all users including inactive
   Future<List<Map<String, dynamic>>> getAllUsersIncludingInactive() async {
     try {
-      return await _dbHelper.getAllUsersIncludingInactive();
+      if (kIsWeb) {
+        debugPrint(
+          'DataService: Web platform - using WebDatabaseService for getAllUsersIncludingInactive',
+        );
+        return await WebDatabaseService.getAllUsersIncludingInactive();
+      } else {
+        debugPrint(
+          'DataService: Mobile platform - using SQLite for getAllUsersIncludingInactive',
+        );
+        return await _dbHelper.getAllUsersIncludingInactive();
+      }
     } catch (e) {
       debugPrint('DataService: Error getting all users including inactive: $e');
       return [];
@@ -72,7 +82,17 @@ class DataService {
   // Get user by ID
   Future<Map<String, dynamic>?> getUserById(int userId) async {
     try {
-      return await _dbHelper.getUserById(userId);
+      if (kIsWeb) {
+        debugPrint(
+          'DataService: Web platform - using WebDatabaseService for getUserById',
+        );
+        return await WebDatabaseService.getUserById(userId);
+      } else {
+        debugPrint(
+          'DataService: Mobile platform - using SQLite for getUserById',
+        );
+        return await _dbHelper.getUserById(userId);
+      }
     } catch (e) {
       debugPrint('DataService: Error getting user by ID: $e');
       return null;
@@ -99,7 +119,17 @@ class DataService {
   // Insert new user
   Future<bool> insertUser(Map<String, dynamic> userData) async {
     try {
-      return await _dbHelper.insertUser(userData);
+      if (kIsWeb) {
+        debugPrint(
+          'DataService: Web platform - using WebDatabaseService for insertUser',
+        );
+        return await WebDatabaseService.insertUser(userData);
+      } else {
+        debugPrint(
+          'DataService: Mobile platform - using SQLite for insertUser',
+        );
+        return await _dbHelper.insertUser(userData);
+      }
     } catch (e) {
       debugPrint('DataService: Error inserting user: $e');
       return false;
@@ -109,7 +139,17 @@ class DataService {
   // Update user
   Future<bool> updateUser(int userId, Map<String, dynamic> userData) async {
     try {
-      return await _dbHelper.updateUser(userId, userData);
+      if (kIsWeb) {
+        debugPrint(
+          'DataService: Web platform - using WebDatabaseService for updateUser',
+        );
+        return await WebDatabaseService.updateUser(userId, userData);
+      } else {
+        debugPrint(
+          'DataService: Mobile platform - using SQLite for updateUser',
+        );
+        return await _dbHelper.updateUser(userId, userData);
+      }
     } catch (e) {
       debugPrint('DataService: Error updating user: $e');
       return false;
@@ -119,7 +159,17 @@ class DataService {
   // Delete user (soft delete)
   Future<bool> deleteUser(int userId) async {
     try {
-      return await _dbHelper.deleteUser(userId);
+      if (kIsWeb) {
+        debugPrint(
+          'DataService: Web platform - using WebDatabaseService for deleteUser',
+        );
+        return await WebDatabaseService.deleteUser(userId);
+      } else {
+        debugPrint(
+          'DataService: Mobile platform - using SQLite for deleteUser',
+        );
+        return await _dbHelper.deleteUser(userId);
+      }
     } catch (e) {
       debugPrint('DataService: Error deleting user: $e');
       return false;
@@ -199,7 +249,11 @@ class DataService {
   // Get all donations
   Future<List<Map<String, dynamic>>> getAllDonations() async {
     try {
-      return await _dbHelper.getAllDonations();
+      if (kIsWeb) {
+        return await WebDatabaseService.getAllDonations();
+      } else {
+        return await _dbHelper.getAllDonations();
+      }
     } catch (e) {
       debugPrint('DataService: Error getting donations: $e');
       return [];
@@ -209,7 +263,11 @@ class DataService {
   // Get all blood requests
   Future<List<Map<String, dynamic>>> getAllBloodRequests() async {
     try {
-      return await _dbHelper.getAllBloodRequests();
+      if (kIsWeb) {
+        return await WebDatabaseService.getAllBloodRequests();
+      } else {
+        return await _dbHelper.getAllBloodRequests();
+      }
     } catch (e) {
       debugPrint('DataService: Error getting blood requests: $e');
       return [];
@@ -221,7 +279,11 @@ class DataService {
     String bloodGroup,
   ) async {
     try {
-      return await _dbHelper.getBloodInventoryByGroup(bloodGroup);
+      if (kIsWeb) {
+        return await WebDatabaseService.getBloodInventoryByGroup(bloodGroup);
+      } else {
+        return await _dbHelper.getBloodInventoryByGroup(bloodGroup);
+      }
     } catch (e) {
       debugPrint('DataService: Error getting blood inventory by group: $e');
       return null;
@@ -231,7 +293,11 @@ class DataService {
   // Update blood inventory
   Future<bool> updateBloodInventory(int id, Map<String, dynamic> data) async {
     try {
-      return await _dbHelper.updateBloodInventory(id, data);
+      if (kIsWeb) {
+        return await WebDatabaseService.updateBloodInventory(id, data);
+      } else {
+        return await _dbHelper.updateBloodInventory(id, data);
+      }
     } catch (e) {
       debugPrint('DataService: Error updating blood inventory: $e');
       return false;
@@ -241,7 +307,11 @@ class DataService {
   // Add new blood inventory item
   Future<bool> addBloodInventory(Map<String, dynamic> data) async {
     try {
-      return await _dbHelper.addBloodInventory(data);
+      if (kIsWeb) {
+        return await WebDatabaseService.insertBloodInventory(data);
+      } else {
+        return await _dbHelper.addBloodInventory(data);
+      }
     } catch (e) {
       debugPrint('DataService: Error adding blood inventory: $e');
       return false;
@@ -251,7 +321,11 @@ class DataService {
   // Delete blood inventory item
   Future<bool> deleteBloodInventory(int id) async {
     try {
-      return await _dbHelper.deleteBloodInventory(id);
+      if (kIsWeb) {
+        return await WebDatabaseService.deleteBloodInventory(id);
+      } else {
+        return await _dbHelper.deleteBloodInventory(id);
+      }
     } catch (e) {
       debugPrint('DataService: Error deleting blood inventory: $e');
       return false;
@@ -261,7 +335,11 @@ class DataService {
   // Search blood inventory
   Future<List<Map<String, dynamic>>> searchBloodInventory(String query) async {
     try {
-      return await _dbHelper.searchBloodInventory(query);
+      if (kIsWeb) {
+        return await WebDatabaseService.searchBloodInventory(query);
+      } else {
+        return await _dbHelper.searchBloodInventory(query);
+      }
     } catch (e) {
       debugPrint('DataService: Error searching blood inventory: $e');
       return [];
@@ -387,9 +465,112 @@ class DataService {
   // Add notification
   Future<bool> addNotification(Map<String, dynamic> notificationData) async {
     try {
-      return await _dbHelper.addNotification(notificationData);
+      if (kIsWeb) {
+        // Web database service doesn't have addNotification method yet
+        debugPrint('DataService: Web platform - notification not implemented yet');
+        return false;
+      } else {
+        return await _dbHelper.addNotification(notificationData);
+      }
     } catch (e) {
       debugPrint('DataService: Error adding notification: $e');
+      return false;
+    }
+  }
+
+  // ===== CONTACT MESSAGE OPERATIONS =====
+
+  // In-memory storage for contact messages (temporary until database is implemented)
+  static final List<Map<String, dynamic>> _contactMessages = [];
+
+  // Add contact message
+  Future<bool> addContactMessage({
+    required String name,
+    required String email,
+    required String subject,
+    required String message,
+  }) async {
+    try {
+      if (kIsWeb) {
+        // Web database service doesn't have contact message methods yet
+        debugPrint('DataService: Web platform - contact message not implemented yet');
+        return false;
+      } else {
+        // Store in memory for now
+        final newMessage = {
+          'id': _contactMessages.length + 1,
+          'name': name,
+          'email': email,
+          'subject': subject,
+          'message': message,
+          'timestamp': DateTime.now().toIso8601String(),
+          'isRead': false,
+          'adminResponse': null,
+        };
+        
+        _contactMessages.add(newMessage);
+        debugPrint('Contact message stored: $name - $subject - $message');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('DataService: Error adding contact message: $e');
+      return false;
+    }
+  }
+
+  // Get all contact messages
+  Future<List<Map<String, dynamic>>> getAllContactMessages() async {
+    try {
+      if (kIsWeb) {
+        // Web database service doesn't have contact message methods yet
+        debugPrint('DataService: Web platform - contact message not implemented yet');
+        return [];
+      } else {
+        // Return in-memory messages for now
+        return List.from(_contactMessages);
+      }
+    } catch (e) {
+      debugPrint('DataService: Error getting contact messages: $e');
+      return [];
+    }
+  }
+
+  // Update contact message (mark as read, add response, etc.)
+  Future<bool> updateContactMessage(int messageId, Map<String, dynamic> updates) async {
+    try {
+      if (kIsWeb) {
+        // Web database service doesn't have contact message methods yet
+        debugPrint('DataService: Web platform - contact message not implemented yet');
+        return false;
+      } else {
+        // Update in-memory message
+        final index = _contactMessages.indexWhere((msg) => msg['id'] == messageId);
+        if (index != -1) {
+          _contactMessages[index].addAll(updates);
+          return true;
+        }
+        return false;
+      }
+    } catch (e) {
+      debugPrint('DataService: Error updating contact message: $e');
+      return false;
+    }
+  }
+
+  // Delete contact message
+  Future<bool> deleteContactMessage(int messageId) async {
+    try {
+      if (kIsWeb) {
+        // Web database service doesn't have contact message methods yet
+        debugPrint('DataService: Web platform - contact message not implemented yet');
+        return false;
+      } else {
+        // Remove from in-memory storage
+        _contactMessages.removeWhere((msg) => msg['id'] == messageId);
+        return true;
+      }
+    } catch (e) {
+      debugPrint('DataService: Error deleting contact message: $e');
       return false;
     }
   }

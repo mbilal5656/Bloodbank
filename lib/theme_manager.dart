@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeManager {
   static const String _themeKey = 'selected_theme';
+  static const String _globalThemeKey = 'global_theme';
   
   // Available themes
   static const Map<String, AppTheme> themes = {
@@ -69,27 +70,44 @@ class ThemeManager {
   };
 
   static String _currentTheme = 'blood_red';
+  static String _globalTheme = 'blood_red';
 
-  // Get current theme
+  // Get current theme (for backward compatibility)
   static String get currentTheme => _currentTheme;
 
-  // Get current theme data
+  // Get global theme (used by all pages)
+  static String get globalTheme => _globalTheme;
+
+  // Get current theme data (for backward compatibility)
   static AppTheme get currentThemeData => themes[_currentTheme] ?? themes['blood_red']!;
+
+  // Get global theme data (used by all pages)
+  static AppTheme get globalThemeData => themes[_globalTheme] ?? themes['blood_red']!;
 
   // Initialize theme from preferences
   static Future<void> initializeTheme() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedTheme = prefs.getString(_themeKey);
+      final savedGlobalTheme = prefs.getString(_globalThemeKey);
+      
       if (savedTheme != null && themes.containsKey(savedTheme)) {
         _currentTheme = savedTheme;
+      }
+      
+      if (savedGlobalTheme != null && themes.containsKey(savedGlobalTheme)) {
+        _globalTheme = savedGlobalTheme;
+      } else {
+        // Set default global theme to current theme
+        _globalTheme = _currentTheme;
+        await prefs.setString(_globalThemeKey, _globalTheme);
       }
     } catch (e) {
       debugPrint('Error loading theme: $e');
     }
   }
 
-  // Change theme
+  // Change theme (for backward compatibility)
   static Future<void> changeTheme(String themeName) async {
     if (themes.containsKey(themeName)) {
       _currentTheme = themeName;
@@ -102,6 +120,21 @@ class ThemeManager {
     }
   }
 
+  // Change global theme (used by home page to set theme for all pages)
+  static Future<void> changeGlobalTheme(String themeName) async {
+    if (themes.containsKey(themeName)) {
+      _globalTheme = themeName;
+      _currentTheme = themeName; // Also update current theme for consistency
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_globalThemeKey, themeName);
+        await prefs.setString(_themeKey, themeName);
+      } catch (e) {
+        debugPrint('Error saving global theme: $e');
+      }
+    }
+  }
+
   // Get theme data by name
   static AppTheme? getThemeByName(String themeName) {
     return themes[themeName];
@@ -110,9 +143,9 @@ class ThemeManager {
   // Get all available themes
   static List<String> get availableThemes => themes.keys.toList();
 
-  // Create MaterialApp theme data
+  // Create MaterialApp theme data using global theme
   static ThemeData getThemeData() {
-    final theme = currentThemeData;
+    final theme = globalThemeData; // Use global theme instead of current theme
     
     return ThemeData(
       primarySwatch: _createMaterialColor(theme.primaryColor),
@@ -121,11 +154,9 @@ class ThemeManager {
         primary: theme.primaryColor,
         secondary: theme.secondaryColor,
         surface: theme.surfaceColor,
-        background: theme.backgroundColor,
         onPrimary: Colors.white,
         onSecondary: theme.textColor,
         onSurface: theme.textColor,
-        onBackground: theme.textColor,
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: theme.primaryColor,
@@ -180,7 +211,7 @@ class ThemeManager {
   static MaterialColor _createMaterialColor(Color color) {
     final strengths = <double>[.05];
     final swatch = <int, Color>{};
-    final r = color.red, g = color.green, b = color.blue;
+    final r = (color.r * 255).round(), g = (color.g * 255).round(), b = (color.b * 255).round();
 
     for (int i = 1; i < 10; i++) {
       strengths.add(0.1 * i);
@@ -194,7 +225,7 @@ class ThemeManager {
         1,
       );
     }
-    return MaterialColor(color.value, swatch);
+    return MaterialColor(color.toARGB32(), swatch);
   }
 }
 

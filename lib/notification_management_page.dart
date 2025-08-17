@@ -24,7 +24,8 @@ class _NotificationManagementPageState
   Future<void> _loadNotifications() async {
     try {
       final notifications = await NotificationHelper.getNotificationsForUser(
-          UserSession.userId ?? 0);
+        UserSession.userId ?? 0,
+      );
       setState(() {
         _notifications = notifications;
         _isLoading = false;
@@ -44,25 +45,102 @@ class _NotificationManagementPageState
     }
   }
 
-  Future<void> _deleteNotification(int notificationId) async {
+  Future<void> _deleteNotificationWithoutDialog(int notificationId) async {
     try {
-      // Since NotificationHelper doesn't have delete method, we'll just mark as read
-      await NotificationHelper.markNotificationAsRead(notificationId);
-      await _loadNotifications(); // Reload to update UI
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Notification marked as read'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      final success = await NotificationHelper.deleteNotification(
+        notificationId,
+      );
+
+      if (success) {
+        await _loadNotifications(); // Reload to update UI
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notification deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to delete notification'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     } catch (e) {
-      debugPrint('Error marking notification as read: $e');
+      debugPrint('Error deleting notification: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text('Error deleting notification: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteNotification(int notificationId) async {
+    try {
+      // Show confirmation dialog before deleting
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Notification'),
+          content: const Text(
+            'Are you sure you want to delete this notification? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        // Actually delete the notification
+        final success = await NotificationHelper.deleteNotification(
+          notificationId,
+        );
+
+        if (success) {
+          await _loadNotifications(); // Reload to update UI
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Notification deleted successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to delete notification'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting notification: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting notification: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -94,16 +172,29 @@ class _NotificationManagementPageState
 
     if (confirmed == true) {
       try {
-        await NotificationHelper.clearNotificationsForUser(
-            UserSession.userId ?? 0);
-        await _loadNotifications();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('All notifications cleared successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
+        final success = await NotificationHelper.clearNotificationsForUser(
+          UserSession.userId ?? 0,
+        );
+
+        if (success) {
+          await _loadNotifications();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('All notifications cleared successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to clear notifications'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
       } catch (e) {
         debugPrint('Error clearing notifications: $e');
@@ -146,10 +237,11 @@ class _NotificationManagementPageState
         child: SafeArea(
           child: _isLoading
               ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white))
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
               : _notifications.isEmpty
-                  ? _buildEmptyState()
-                  : _buildNotificationsList(),
+              ? _buildEmptyState()
+              : _buildNotificationsList(),
         ),
       ),
     );
@@ -185,10 +277,7 @@ class _NotificationManagementPageState
           const SizedBox(height: 8),
           const Text(
             'You\'re all caught up!',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.white70),
           ),
         ],
       ),
@@ -205,7 +294,51 @@ class _NotificationManagementPageState
             itemCount: _notifications.length,
             itemBuilder: (context, index) {
               final notification = _notifications[index];
-              return _buildNotificationCard(notification);
+              return Dismissible(
+                key: Key('notification_${notification['id']}'),
+                direction: DismissDirection.endToStart,
+                confirmDismiss: (direction) async {
+                  return await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Delete Notification'),
+                      content: const Text(
+                        'Are you sure you want to delete this notification?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                onDismissed: (direction) {
+                  _deleteNotificationWithoutDialog(notification['id']);
+                },
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+                child: _buildNotificationCard(notification),
+              );
             },
           ),
         ),
@@ -254,6 +387,15 @@ class _NotificationManagementPageState
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Swipe right to delete notifications',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white60,
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
@@ -331,10 +473,7 @@ class _NotificationManagementPageState
           ],
         ),
         trailing: PopupMenuButton<String>(
-          icon: const Icon(
-            Icons.more_vert,
-            color: Colors.white70,
-          ),
+          icon: const Icon(Icons.more_vert, color: Colors.white70),
           onSelected: (value) {
             switch (value) {
               case 'read':

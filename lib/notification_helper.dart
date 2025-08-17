@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'package:timezone/timezone.dart' as tz;
 
 class NotificationHelper {
   static const String _notificationsKey = 'notifications';
@@ -248,7 +247,6 @@ class NotificationHelper {
   // Handle notification tap based on type
   static void _handleNotificationTap(Map<String, dynamic> notification) {
     final type = notification['type'];
-    final payload = notification['payload'];
 
     switch (type) {
       case 'blood_request':
@@ -443,7 +441,6 @@ class NotificationHelper {
   // Poll for notifications (called periodically)
   static Future<void> pollNotifications(int userId) async {
     try {
-      final unreadCount = await getUnreadNotificationsCount(userId);
       // Update badge or UI as needed
     } catch (e) {
       // Handle polling error silently

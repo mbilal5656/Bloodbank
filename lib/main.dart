@@ -16,7 +16,7 @@ import 'blood_inventory_page.dart';
 import 'notification_management_page.dart';
 import 'notification_helper.dart';
 import 'session_manager.dart';
-import 'db_helper.dart';
+
 import 'services/data_service.dart';
 import 'theme/theme_provider.dart';
 import 'analytics_dashboard.dart';
@@ -24,39 +24,70 @@ import 'qr_code_scanner.dart';
 import 'search_filter_page.dart';
 import 'theme_manager.dart';
 import 'theme_selection_page.dart';
+import 'security_settings_page.dart';
+import 'utils/performance_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize database
-  try {
-    await DataService.initializeDatabase();
-    debugPrint('Database initialized successfully');
-  } catch (e) {
-    debugPrint('Error initializing database: $e');
-  }
+  // Apply performance optimizations immediately
+  PerformanceConfig.configurePerformance();
+  PerformanceConfig.configureSystemUI();
+  PerformanceConfig.configureSplashScreenOptimizations();
 
-  // Initialize theme
-  try {
-    await ThemeManager.initializeTheme();
-    debugPrint('Theme initialized successfully');
-  } catch (e) {
-    debugPrint('Error initializing theme: $e');
-  }
-
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  // Start the app immediately
+  // Start the app immediately with zero blocking operations
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
       child: const BloodBankApp(),
     ),
   );
+
+  // Set orientations in background
+  Future.microtask(() async {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  });
+
+  // Initialize everything else in background with higher priority
+  _initializeCriticalServicesInBackground();
+}
+
+Future<void> _initializeCriticalServicesInBackground() async {
+  try {
+    // Use microtasks for faster execution
+    Future.microtask(() async {
+      // Initialize database and theme in parallel with higher priority
+      await Future.wait([
+        _initializeDatabase(),
+        _initializeTheme(),
+      ], eagerError: false); // Don't fail fast, continue with what works
+
+      debugPrint('Background services initialized successfully');
+    });
+  } catch (e) {
+    debugPrint('Error initializing background services: $e');
+  }
+}
+
+Future<void> _initializeDatabase() async {
+  try {
+    await DataService.initializeDatabase();
+    debugPrint('Database initialized successfully');
+  } catch (e) {
+    debugPrint('Error initializing database: $e');
+  }
+}
+
+Future<void> _initializeTheme() async {
+  try {
+    await ThemeManager.initializeTheme();
+    debugPrint('Theme initialized successfully');
+  } catch (e) {
+    debugPrint('Error initializing theme: $e');
+  }
 }
 
 class BloodBankApp extends StatelessWidget {
@@ -66,9 +97,18 @@ class BloodBankApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
+        final optimizedConfig = PerformanceConfig.getOptimizedAppConfig();
+
         return MaterialApp(
           title: 'Blood Bank Management System',
-          debugShowCheckedModeBanner: false,
+          debugShowCheckedModeBanner:
+              optimizedConfig['debugShowCheckedModeBanner'],
+          showPerformanceOverlay: optimizedConfig['showPerformanceOverlay'],
+          showSemanticsDebugger: optimizedConfig['showSemanticsDebugger'],
+          checkerboardRasterCacheImages:
+              optimizedConfig['checkerboardRasterCacheImages'],
+          checkerboardOffscreenLayers:
+              optimizedConfig['checkerboardOffscreenLayers'],
           theme: themeProvider.getThemeData(context),
           home: const SplashScreen(),
           routes: {
@@ -92,6 +132,8 @@ class BloodBankApp extends StatelessWidget {
             '/qr_scanner': (context) => const QRCodeScanner(),
             '/search_filter': (context) => const SearchFilterPage(),
             '/theme_selection': (context) => const ThemeSelectionPage(),
+            '/security_settings': (context) => const SecuritySettingsPage(),
+
             // Add user-specific routes
             '/user/Admin': (context) => const AdminPage(),
             '/user/Donor': (context) => const DonorPage(),

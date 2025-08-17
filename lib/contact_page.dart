@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'main.dart' show NavigationUtils;
-import 'theme/theme_provider.dart';
-import 'theme_manager.dart';
+import 'services/data_service.dart';
 
 class ContactPage extends StatefulWidget {
   const ContactPage({super.key});
@@ -20,176 +17,19 @@ class _ContactPageState extends State<ContactPage> {
   final _messageController = TextEditingController();
   bool _isLoading = false;
 
-  void _showThemeSelector() {
-    showModalBottomSheet(
+  void _showHelpDialog() {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildThemeSelector(),
-    );
-  }
-
-  Widget _buildThemeSelector() {
-    final currentTheme = context.watch<ThemeProvider>().currentAppTheme;
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      decoration: BoxDecoration(
-        color: currentTheme.surfaceColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+      builder: (context) => AlertDialog(
+        title: const Text('Help'),
+        content: const Text(
+          'This page is currently under construction. Please check back later for more information.',
         ),
-      ),
-      child: Column(
-        children: [
-          // Handle bar
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Icon(Icons.palette, color: currentTheme.primaryColor),
-                const SizedBox(width: 12),
-                Text(
-                  'Choose Theme',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: currentTheme.textColor,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: currentTheme.textColor),
-                ),
-              ],
-            ),
-          ),
-
-          // Theme grid
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.85,
-                ),
-                itemCount: ThemeManager.themes.length,
-                itemBuilder: (context, index) {
-                  final themeKey = ThemeManager.availableThemes[index];
-                  final theme = ThemeManager.themes[themeKey]!;
-                  final isSelected = ThemeManager.currentTheme == themeKey;
-
-                  return GestureDetector(
-                    onTap: () async {
-                      await ThemeManager.changeTheme(themeKey);
-                      // Notify the theme provider to update
-                      context.read<ThemeProvider>().notifyListeners();
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Theme changed to ${theme.name}'),
-                          backgroundColor: theme.primaryColor,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: currentTheme.surfaceColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected
-                              ? theme.primaryColor
-                              : Colors.grey.shade300,
-                          width: isSelected ? 3 : 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          // Theme preview
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              gradient: LinearGradient(
-                                colors: [
-                                  theme.primaryColor,
-                                  theme.secondaryColor,
-                                  theme.accentColor,
-                                ],
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.bloodtype,
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            theme.name,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: currentTheme.textColor,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 4),
-                          if (isSelected)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4),
-                              decoration: BoxDecoration(
-                                color: theme.primaryColor,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Active',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // Bottom padding
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -210,24 +50,40 @@ class _ContactPageState extends State<ContactPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Simulate form submission
-      await Future.delayed(const Duration(seconds: 2));
+      final dataService = DataService();
+
+      final success = await dataService.addContactMessage(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        subject: _subjectController.text.trim(),
+        message: _messageController.text.trim(),
+      );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Message sent successfully! We will get back to you soon.'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Message sent successfully! We will get back to you soon.',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
 
-        // Clear form
-        _formKey.currentState!.reset();
-        _nameController.clear();
-        _emailController.clear();
-        _subjectController.clear();
-        _messageController.clear();
+          // Clear form
+          _formKey.currentState!.reset();
+          _nameController.clear();
+          _emailController.clear();
+          _subjectController.clear();
+          _messageController.clear();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to send message. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -246,14 +102,26 @@ class _ContactPageState extends State<ContactPage> {
   }
 
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not launch $url'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error launching URL: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not launch $url'),
+            content: Text('Error launching URL: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -272,14 +140,11 @@ class _ContactPageState extends State<ContactPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.palette),
-            onPressed: () => _showThemeSelector(),
-            tooltip: 'Change Theme',
-          ),
-          IconButton(
-            icon: const Icon(Icons.home),
-            onPressed: () => NavigationUtils.navigateToHome(context),
-            tooltip: 'Home',
+            icon: const Icon(Icons.help_outline),
+            onPressed: () {
+              _showHelpDialog();
+            },
+            tooltip: 'Help',
           ),
         ],
       ),
@@ -348,10 +213,7 @@ class _ContactPageState extends State<ContactPage> {
         const SizedBox(height: 8),
         const Text(
           'We\'re here to help and answer any questions you might have',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.white70,
-          ),
+          style: TextStyle(fontSize: 16, color: Colors.white70),
         ),
       ],
     );
@@ -430,10 +292,7 @@ class _ContactPageState extends State<ContactPage> {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         onTap: onTap,
       ),
@@ -469,16 +328,20 @@ class _ContactPageState extends State<ContactPage> {
               decoration: InputDecoration(
                 labelText: 'Your Name',
                 prefixIcon: const Icon(Icons.person, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
               ),
               style: const TextStyle(color: Colors.white),
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.trim().isEmpty) {
                   return 'Please enter your name';
+                }
+                if (value.trim().length < 2) {
+                  return 'Name must be at least 2 characters';
                 }
                 return null;
               },
@@ -491,8 +354,9 @@ class _ContactPageState extends State<ContactPage> {
               decoration: InputDecoration(
                 labelText: 'Your Email',
                 prefixIcon: const Icon(Icons.email, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -500,12 +364,14 @@ class _ContactPageState extends State<ContactPage> {
               style: const TextStyle(color: Colors.white),
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.trim().isEmpty) {
                   return 'Please enter your email';
                 }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                    .hasMatch(value)) {
-                  return 'Please enter a valid email';
+                final email = value.trim();
+                if (!RegExp(
+                  r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                ).hasMatch(email)) {
+                  return 'Please enter a valid email address';
                 }
                 return null;
               },
@@ -518,16 +384,20 @@ class _ContactPageState extends State<ContactPage> {
               decoration: InputDecoration(
                 labelText: 'Subject',
                 prefixIcon: const Icon(Icons.subject, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
               ),
               style: const TextStyle(color: Colors.white),
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.trim().isEmpty) {
                   return 'Please enter a subject';
+                }
+                if (value.trim().length < 3) {
+                  return 'Subject must be at least 3 characters';
                 }
                 return null;
               },
@@ -540,8 +410,9 @@ class _ContactPageState extends State<ContactPage> {
               decoration: InputDecoration(
                 labelText: 'Message',
                 prefixIcon: const Icon(Icons.message, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -549,11 +420,14 @@ class _ContactPageState extends State<ContactPage> {
               style: const TextStyle(color: Colors.white),
               maxLines: 4,
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.trim().isEmpty) {
                   return 'Please enter your message';
                 }
-                if (value.length < 10) {
+                if (value.trim().length < 10) {
                   return 'Message must be at least 10 characters';
+                }
+                if (value.trim().length > 1000) {
+                  return 'Message must be less than 1000 characters';
                 }
                 return null;
               },

@@ -500,11 +500,6 @@ class DatabaseHelper {
       if (result.isNotEmpty) {
         return result.first;
       } else {
-        final allUsers = await db.query(
-          _usersTable,
-          where: 'email = ?',
-          whereArgs: [email],
-        );
         return null;
       }
     } catch (e) {

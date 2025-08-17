@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'services/data_service.dart';
-import 'dart:convert';
 
 class QRCodeScanner extends StatefulWidget {
   const QRCodeScanner({super.key});
@@ -13,14 +11,11 @@ class QRCodeScanner extends StatefulWidget {
 class _QRCodeScannerState extends State<QRCodeScanner> {
   final DataService _dataService = DataService();
   bool _isScanning = false;
-  String _scannedData = '';
   Map<String, dynamic>? _scannedItem;
   String _scanMode = 'blood_bag'; // 'blood_bag' or 'donor'
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('QR Code Scanner'),
@@ -120,13 +115,13 @@ class _QRCodeScannerState extends State<QRCodeScanner> {
                 Icon(
                   Icons.qr_code_scanner,
                   size: 80,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'QR Code Scanner',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -135,7 +130,7 @@ class _QRCodeScannerState extends State<QRCodeScanner> {
                 Text(
                   'Position QR code within the frame',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     fontSize: 14,
                   ),
                 ),
@@ -151,7 +146,7 @@ class _QRCodeScannerState extends State<QRCodeScanner> {
                     child: Icon(
                       Icons.qr_code,
                       size: 60,
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                     ),
                   ),
                 ),
@@ -311,12 +306,14 @@ class _QRCodeScannerState extends State<QRCodeScanner> {
   }
 
   Future<void> _simulateScan() async {
+    if (_isScanning) return; // Prevent multiple simultaneous scans
+    
     setState(() => _isScanning = true);
 
-    // Simulate scanning delay
-    await Future.delayed(const Duration(seconds: 2));
-
     try {
+      // Simulate scanning delay
+      await Future.delayed(const Duration(seconds: 2));
+
       if (_scanMode == 'blood_bag') {
         await _simulateBloodBagScan();
       } else {
@@ -333,65 +330,96 @@ class _QRCodeScannerState extends State<QRCodeScanner> {
         );
       }
     } finally {
-      setState(() => _isScanning = false);
+      if (mounted) {
+        setState(() => _isScanning = false);
+      }
     }
   }
 
   Future<void> _simulateBloodBagScan() async {
-    // Simulate scanning a blood bag QR code
-    final bloodInventory = await _dataService.getAllBloodInventory();
+    try {
+      // Simulate scanning a blood bag QR code
+      final bloodInventory = await _dataService.getAllBloodInventory();
 
-    if (bloodInventory.isNotEmpty) {
-      // Use the first blood inventory item as scanned data
-      final scannedItem = bloodInventory.first;
+      if (bloodInventory.isNotEmpty) {
+        // Use the first blood inventory item as scanned data
+        final scannedItem = bloodInventory.first;
+        
+        // Validate the scanned item has required fields
+        if (scannedItem['bloodGroup'] != null && scannedItem['quantity'] != null) {
+          setState(() {
+            _scannedItem = scannedItem;
+          });
 
-      setState(() {
-        _scannedItem = scannedItem;
-        _scannedData = json.encode(scannedItem);
-      });
-
-      debugPrint('✅ Blood bag scanned: ${scannedItem['bloodGroup']}');
-    } else {
-      throw Exception('No blood inventory found');
+          debugPrint('✅ Blood bag scanned: ${scannedItem['bloodGroup']}');
+        } else {
+          throw Exception('Invalid blood bag data format');
+        }
+      } else {
+        throw Exception('No blood inventory found');
+      }
+    } catch (e) {
+      debugPrint('Blood bag scan error: $e');
+      rethrow;
     }
   }
 
   Future<void> _simulateDonorScan() async {
-    // Simulate scanning a donor QR code
-    final users = await _dataService.getAllUsers();
-    final donors = users.where((user) => user['userType'] == 'Donor').toList();
+    try {
+      // Simulate scanning a donor QR code
+      final users = await _dataService.getAllUsers();
+      final donors = users.where((user) => user['userType'] == 'Donor').toList();
 
-    if (donors.isNotEmpty) {
-      // Use the first donor as scanned data
-      final scannedItem = donors.first;
+      if (donors.isNotEmpty) {
+        // Use the first donor as scanned data
+        final scannedItem = donors.first;
+        
+        // Validate the scanned item has required fields
+        if (scannedItem['name'] != null && scannedItem['bloodGroup'] != null) {
+          setState(() {
+            _scannedItem = scannedItem;
+          });
 
-      setState(() {
-        _scannedItem = scannedItem;
-        _scannedData = json.encode(scannedItem);
-      });
-
-      debugPrint('✅ Donor scanned: ${scannedItem['name']}');
-    } else {
-      throw Exception('No donors found');
+          debugPrint('✅ Donor scanned: ${scannedItem['name']}');
+        } else {
+          throw Exception('Invalid donor data format');
+        }
+      } else {
+        throw Exception('No donors found');
+      }
+    } catch (e) {
+      debugPrint('Donor scan error: $e');
+      rethrow;
     }
   }
 
   void _clearResults() {
     setState(() {
       _scannedItem = null;
-      _scannedData = '';
     });
   }
 
   void _viewDetails() {
     if (_scannedItem == null) return;
 
-    if (_scanMode == 'blood_bag') {
-      // Navigate to blood inventory details
-      Navigator.pushNamed(context, '/blood_inventory');
-    } else {
-      // Navigate to user profile
-      Navigator.pushNamed(context, '/profile');
+    try {
+      if (_scanMode == 'blood_bag') {
+        // Navigate to blood inventory details
+        Navigator.pushNamed(context, '/blood_inventory');
+      } else {
+        // Navigate to user profile
+        Navigator.pushNamed(context, '/profile');
+      }
+    } catch (e) {
+      debugPrint('Navigation error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Unable to navigate to details'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
   }
 

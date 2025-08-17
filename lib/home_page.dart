@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'main.dart' show UserSession, NavigationUtils;
+import 'main.dart' show NavigationUtils;
 import 'session_manager.dart';
 import 'services/data_service.dart';
 import 'theme_manager.dart';
-import 'theme_selection_page.dart';
+
 import 'theme/theme_provider.dart';
 
 class HomePage extends StatefulWidget {
@@ -136,17 +136,21 @@ class _HomePageState extends State<HomePage> {
 
                   return GestureDetector(
                     onTap: () async {
-                      await ThemeManager.changeTheme(themeKey);
+                      await ThemeManager.changeGlobalTheme(themeKey);
                       // Notify the theme provider to update
-                      context.read<ThemeProvider>().notifyListeners();
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Theme changed to ${theme.name}'),
-                          backgroundColor: theme.primaryColor,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      if (context.mounted) {
+                        context.read<ThemeProvider>().refreshTheme();
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Global theme changed to ${theme.name}',
+                            ),
+                            backgroundColor: theme.primaryColor,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
                     },
                     child: Container(
                       padding: const EdgeInsets.all(16),
@@ -320,7 +324,35 @@ class _HomePageState extends State<HomePage> {
 
           // Call to Action
           _buildCallToAction(theme),
+          const SizedBox(height: 24),
+
+          // Contact Us Link
+          _buildContactUsLink(theme),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContactUsLink(AppTheme theme) {
+    return Center(
+      child: TextButton(
+        onPressed: () => Navigator.pushNamed(context, '/contact'),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.contact_support, color: theme.primaryColor, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              'Contact Us',
+              style: TextStyle(
+                color: theme.primaryColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -808,6 +840,11 @@ class _HomePageState extends State<HomePage> {
         'icon': Icons.notifications,
         'title': 'Notifications',
         'route': '/notification_management',
+      },
+      {
+        'icon': Icons.contact_support,
+        'title': 'Contact Us',
+        'route': '/contact',
       },
     ];
 

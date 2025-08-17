@@ -15,7 +15,10 @@ class AdminPage extends StatefulWidget {
 
 class _AdminPageState extends State<AdminPage> {
   List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _contactMessages = [];
   Map<String, int> _bloodInventorySummary = {};
+  List<Map<String, dynamic>> _bloodInventory =
+      []; // Add this line for detailed blood inventory
   bool _isLoading = true;
   final _formKey = GlobalKey<FormState>();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -62,10 +65,15 @@ class _AdminPageState extends State<AdminPage> {
       final users = await dataService.getAllUsers();
       final bloodInventorySummary = await dataService
           .getBloodInventorySummary();
+      final contactMessages = await dataService.getAllContactMessages();
+      final bloodInventory = await dataService
+          .getAllBloodInventory(); // Add this line
 
       setState(() {
         _users = users;
         _bloodInventorySummary = bloodInventorySummary;
+        _contactMessages = contactMessages;
+        _bloodInventory = bloodInventory; // Add this line
         _isLoading = false;
       });
     } catch (e) {
@@ -226,8 +234,8 @@ class _AdminPageState extends State<AdminPage> {
                   return GestureDetector(
                     onTap: () async {
                       await ThemeManager.changeTheme(themeKey);
-                      // Notify the theme provider to update
-                      context.read<ThemeProvider>().notifyListeners();
+                      // Refresh the UI to show the new theme
+                      setState(() {});
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -746,6 +754,14 @@ class _AdminPageState extends State<AdminPage> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
+            heroTag: 'add_blood_fab',
+            onPressed: _showAddBloodInventoryDialog,
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            child: const Icon(Icons.bloodtype),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton(
             heroTag: 'notification_fab',
             onPressed: () {
               setState(() {
@@ -825,6 +841,9 @@ class _AdminPageState extends State<AdminPage> {
                   ],
                   _buildBloodInventorySummary(),
                   const SizedBox(height: 20),
+                  _buildContactMessagesSection(),
+                  const SizedBox(height: 20),
+
                   if (_showAddUserForm) ...[
                     _buildAddUserForm(),
                     const SizedBox(height: 20),
@@ -1097,7 +1116,7 @@ class _AdminPageState extends State<AdminPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Blood Inventory Summary',
+                        'Blood Inventory Management',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: isDark
                               ? Colors.white
@@ -1110,7 +1129,7 @@ class _AdminPageState extends State<AdminPage> {
                         onPressed: () =>
                             Navigator.pushNamed(context, '/blood_inventory'),
                         icon: const Icon(Icons.inventory),
-                        label: const Text('Manage Inventory'),
+                        label: const Text('Full Inventory'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1A237E),
                           foregroundColor: Colors.white,
@@ -1127,7 +1146,7 @@ class _AdminPageState extends State<AdminPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Blood Inventory Summary',
+                        'Blood Inventory Management',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: isDark
                               ? Colors.white
@@ -1139,7 +1158,7 @@ class _AdminPageState extends State<AdminPage> {
                         onPressed: () =>
                             Navigator.pushNamed(context, '/blood_inventory'),
                         icon: const Icon(Icons.inventory),
-                        label: const Text('Manage Inventory'),
+                        label: const Text('Full Inventory'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1A237E),
                           foregroundColor: Colors.white,
@@ -1154,60 +1173,470 @@ class _AdminPageState extends State<AdminPage> {
               },
             ),
             const SizedBox(height: 16),
-            if (_bloodInventorySummary.isNotEmpty)
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                children: _bloodInventorySummary.entries.map((entry) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: entry.value > 0
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: entry.value > 0 ? Colors.green : Colors.red,
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          entry.key,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${entry.value}',
-                          style: TextStyle(
-                            color: entry.value > 0 ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              )
-            else
+            _buildBloodInventoryList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBloodInventoryList() {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    if (_bloodInventory.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.inventory_2_outlined,
+                size: 64,
+                color: isDark ? Colors.white70 : Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
               Text(
                 'No blood inventory data available',
                 style: TextStyle(
-                  color: isDark ? Colors.white70 : Colors.grey,
-                  fontStyle: FontStyle.italic,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white70 : Colors.grey[600],
                 ),
               ),
+              const SizedBox(height: 8),
+              Text(
+                'Add blood units to get started',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white54 : Colors.grey[500],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _bloodInventory
+          .map((bloodUnit) => _buildBloodUnitCard(bloodUnit))
+          .toList(),
+    );
+  }
+
+  Widget _buildBloodUnitCard(Map<String, dynamic> bloodUnit) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final status = bloodUnit['status'] ?? 'Available';
+    final totalQty = bloodUnit['quantity'] ?? 0;
+    final reservedQty = bloodUnit['reservedQuantity'] ?? 0;
+    final availableQty = totalQty - reservedQty;
+
+    Color statusColor;
+    IconData statusIcon;
+
+    switch (status.toLowerCase()) {
+      case 'available':
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle;
+        break;
+      case 'low stock':
+        statusColor = Colors.orange;
+        statusIcon = Icons.warning;
+        break;
+      case 'out of stock':
+        statusColor = Colors.red;
+        statusIcon = Icons.error;
+        break;
+      case 'expired':
+        statusColor = Colors.red;
+        statusIcon = Icons.block;
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusIcon = Icons.help;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF3C3C3C) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: statusColor.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.bloodtype, color: statusColor, size: 22),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${bloodUnit['bloodGroup']} Blood Group',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ],
         ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildQuantityInfo('Total', totalQty, Colors.blue),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildQuantityInfo(
+                    'Available',
+                    availableQty,
+                    Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildQuantityInfo(
+                    'Reserved',
+                    reservedQty,
+                    Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            if (bloodUnit['expiryDate'] != null) ...[
+              Text(
+                'Expires: ${bloodUnit['expiryDate']}',
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.grey[600],
+                  fontSize: 12,
+                ),
+              ),
+            ],
+            if (bloodUnit['notes'] != null &&
+                bloodUnit['notes'].isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                bloodUnit['notes'],
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : Colors.grey[600],
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          icon: Icon(
+            Icons.more_vert,
+            color: isDark ? Colors.white70 : Colors.grey[600],
+          ),
+          onSelected: (value) async {
+            switch (value) {
+              case 'edit':
+                showDialog(
+                  context: context,
+                  builder: (context) => _buildEditBloodUnitDialog(bloodUnit),
+                );
+                break;
+              case 'delete':
+                await _deleteBloodUnit(bloodUnit['id']);
+                break;
+              case 'view':
+                _showBloodUnitDetails(bloodUnit);
+                break;
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'view',
+              child: Row(
+                children: [
+                  Icon(Icons.visibility, size: 20),
+                  SizedBox(width: 8),
+                  Text('View Details'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'edit',
+              child: Row(
+                children: [
+                  Icon(Icons.edit, size: 20),
+                  SizedBox(width: 8),
+                  Text('Edit'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuantityInfo(String label, int quantity, Color color) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            '$quantity',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteBloodUnit(int bloodUnitId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: const Text(
+          'Are you sure you want to delete this blood unit? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final dataService = DataService();
+        final success = await dataService.deleteBloodInventory(bloodUnitId);
+
+        if (success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Blood unit deleted successfully'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          // Refresh the data
+          await _loadData();
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to delete blood unit'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting blood unit: ${e.toString()}'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _showBloodUnitDetails(Map<String, dynamic> bloodUnit) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final totalQty = bloodUnit['quantity'] ?? 0;
+    final reservedQty = bloodUnit['reservedQuantity'] ?? 0;
+    final availableQty = totalQty - reservedQty;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        title: Text(
+          '${bloodUnit['bloodGroup']} Blood Unit Details',
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDetailRow(
+                  'Blood Group:',
+                  bloodUnit['bloodGroup'] ?? 'Unknown',
+                ),
+                _buildDetailRow('Total Quantity:', '$totalQty'),
+                _buildDetailRow('Available Quantity:', '$availableQty'),
+                _buildDetailRow('Reserved Quantity:', '$reservedQty'),
+                _buildDetailRow('Status:', bloodUnit['status'] ?? 'Unknown'),
+                if (bloodUnit['expiryDate'] != null)
+                  _buildDetailRow('Expiry Date:', bloodUnit['expiryDate']),
+                if (bloodUnit['notes'] != null &&
+                    bloodUnit['notes'].isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Notes:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      bloodUnit['notes'],
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              showDialog(
+                context: context,
+                builder: (context) => _buildEditBloodUnitDialog(bloodUnit),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Edit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white70 : Colors.grey[600],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1737,5 +2166,865 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildEditBloodUnitDialog(
+    Map<String, dynamic> bloodUnit, {
+    bool isNew = false,
+  }) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final quantityController = TextEditingController(
+      text: bloodUnit['quantity'].toString(),
+    );
+    final reservedController = TextEditingController(
+      text: bloodUnit['reservedQuantity'].toString(),
+    );
+    final statusController = TextEditingController(text: bloodUnit['status']);
+    final notesController = TextEditingController(
+      text: bloodUnit['notes'] ?? '',
+    );
+
+    return AlertDialog(
+      backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+      title: Text(
+        isNew
+            ? 'Add Blood Unit - ${bloodUnit['bloodGroup']}'
+            : 'Edit Blood Unit - ${bloodUnit['bloodGroup']}',
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: quantityController,
+              decoration: InputDecoration(
+                labelText: 'Total Quantity',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: reservedController,
+              decoration: InputDecoration(
+                labelText: 'Reserved Quantity',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: statusController.text,
+              decoration: InputDecoration(
+                labelText: 'Status',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
+              ),
+              items: ['Available', 'Reserved', 'Expired', 'Out of Stock']
+                  .map(
+                    (status) =>
+                        DropdownMenuItem(value: status, child: Text(status)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                statusController.text = value!;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: notesController,
+              decoration: InputDecoration(
+                labelText: 'Notes',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            // Close dialog immediately to avoid BuildContext issues
+            Navigator.pop(context, true);
+
+            try {
+              final dataService = DataService();
+              bool success;
+
+              if (isNew) {
+                // Add new blood inventory
+                success = await dataService.addBloodInventory({
+                  'bloodGroup': bloodUnit['bloodGroup'],
+                  'quantity': int.parse(quantityController.text),
+                  'reservedQuantity': int.parse(reservedController.text),
+                  'status': statusController.text,
+                  'notes': notesController.text,
+                  'expiryDate': bloodUnit['expiryDate'],
+                  'lastUpdated': DateTime.now().toIso8601String(),
+                });
+              } else {
+                // Update existing blood inventory
+                success = await dataService
+                    .updateBloodInventory(bloodUnit['id'], {
+                      'quantity': int.parse(quantityController.text),
+                      'reservedQuantity': int.parse(reservedController.text),
+                      'status': statusController.text,
+                      'notes': notesController.text,
+                      'lastUpdated': DateTime.now().toIso8601String(),
+                    });
+              }
+
+              if (success) {
+                // Schedule snackbar to be shown after the current frame
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isNew
+                              ? 'Blood unit added successfully!'
+                              : 'Blood unit updated successfully!',
+                        ),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                });
+                // Refresh the data
+                await _loadData();
+              } else {
+                // Schedule snackbar to be shown after the current frame
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isNew
+                              ? 'Failed to add blood unit'
+                              : 'Failed to update blood unit',
+                        ),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                });
+              }
+            } catch (e) {
+              // Schedule snackbar to be shown after the current frame
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Error ${isNew ? 'adding' : 'updating'} blood unit: ${e.toString()}',
+                      ),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              });
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+          ),
+          child: Text(isNew ? 'Add' : 'Save'),
+        ),
+      ],
+    );
+  }
+
+  // Show add blood inventory dialog
+  Future<void> _showAddBloodInventoryDialog() async {
+    try {
+      // Show blood group selection first
+      final selectedBloodGroup = await showDialog<String>(
+        context: context,
+        builder: (context) => _buildBloodGroupSelector(),
+      );
+
+      if (selectedBloodGroup != null && mounted) {
+        // Create a new blood inventory item with selected blood group
+        final newInventory = {
+          'id': 0,
+          'bloodGroup': selectedBloodGroup,
+          'quantity': 0,
+          'reservedQuantity': 0,
+          'status': 'Available',
+          'expiryDate': DateTime.now()
+              .add(const Duration(days: 30))
+              .toIso8601String(),
+          'lastUpdated': DateTime.now().toIso8601String(),
+          'notes': null,
+        };
+
+        final result = await showDialog<bool>(
+          context: context,
+          builder: (context) =>
+              _buildEditBloodUnitDialog(newInventory, isNew: true),
+        );
+
+        if (result == true) {
+          // Refresh the inventory after successful add
+          await _loadData();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening add dialog: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  // Build blood group selector dialog
+  Widget _buildBloodGroupSelector() {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.8,
+        constraints: const BoxConstraints(maxWidth: 400),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1A237E)
+                    : const Color(0xFF1A237E),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.add, color: Colors.white, size: 28),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Select Blood Group',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(Icons.close, color: Colors.white),
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+            ),
+
+            // Blood group grid
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.5,
+                ),
+                itemCount: bloodGroups.length,
+                itemBuilder: (context, index) {
+                  final bloodGroup = bloodGroups[index];
+                  return InkWell(
+                    onTap: () => Navigator.of(context).pop(bloodGroup),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF3C3C3C)
+                            : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _getBloodGroupColor(
+                            bloodGroup,
+                          ).withValues(alpha: 0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          bloodGroup,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _getBloodGroupColor(bloodGroup),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getBloodGroupColor(String bloodGroup) {
+    switch (bloodGroup) {
+      case 'A+':
+        return Colors.red[700]!;
+      case 'A-':
+        return Colors.red[500]!;
+      case 'B+':
+        return Colors.orange[700]!;
+      case 'B-':
+        return Colors.orange[500]!;
+      case 'AB+':
+        return Colors.purple[700]!;
+      case 'AB-':
+        return Colors.purple[500]!;
+      case 'O+':
+        return Colors.red[900]!;
+      case 'O-':
+        return Colors.red[300]!;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildContactMessagesSection() {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    if (_contactMessages.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.chat_bubble_outline,
+                size: 64,
+                color: isDark ? Colors.white70 : Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No contact messages received yet.',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white70 : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Users will be able to contact you through the contact page.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white54 : Colors.grey[500],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Contact Messages',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: isDark ? Colors.white : const Color(0xFF1A237E),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ..._contactMessages
+            .map((message) => _buildContactMessageCard(message))
+            .toList(),
+      ],
+    );
+  }
+
+  Widget _buildContactMessageCard(Map<String, dynamic> message) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final senderName = message['name'] ?? 'Anonymous User';
+    final senderEmail = message['email'] ?? 'No email';
+    final subject = message['subject'] ?? 'No Subject';
+    final messageBody = message['message'] ?? 'No message content';
+    final timestamp = message['timestamp'] ?? DateTime.now().toIso8601String();
+    final isRead = message['isRead'] ?? false;
+    final hasResponse =
+        message['adminResponse'] != null && message['adminResponse'].isNotEmpty;
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isRead
+                ? (hasResponse ? Colors.green : Colors.blue)
+                : Colors.orange,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              isRead
+                                  ? Icons.mark_email_read
+                                  : Icons.mark_email_unread,
+                              color: isRead ? Colors.green : Colors.orange,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                senderName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          senderEmail,
+                          style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: isDark ? Colors.white70 : Colors.grey[600],
+                    ),
+                    onSelected: (value) async {
+                      switch (value) {
+                        case 'mark_read':
+                          await _markMessageAsRead(message['id']);
+                          break;
+                        case 'respond':
+                          _showResponseDialog(message);
+                          break;
+                        case 'delete':
+                          await _deleteContactMessage(message['id']);
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      if (!isRead)
+                        const PopupMenuItem(
+                          value: 'mark_read',
+                          child: Row(
+                            children: [
+                              Icon(Icons.mark_email_read, size: 20),
+                              SizedBox(width: 8),
+                              Text('Mark as Read'),
+                            ],
+                          ),
+                        ),
+                      const PopupMenuItem(
+                        value: 'respond',
+                        child: Row(
+                          children: [
+                            Icon(Icons.reply, size: 20),
+                            SizedBox(width: 8),
+                            Text('Respond'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red, size: 20),
+                            SizedBox(width: 8),
+                            Text('Delete', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.white : Colors.black87).withValues(
+                    alpha: 0.1,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  subject,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                messageBody,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    'Received: ${DateTime.parse(timestamp).toLocal().toString().split('.')[0]}',
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (hasResponse)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Responded',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              if (hasResponse) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.green.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Admin Response:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        message['adminResponse'],
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _markMessageAsRead(int messageId) async {
+    try {
+      final dataService = DataService();
+      final success = await dataService.updateContactMessage(messageId, {
+        'isRead': 1,
+      });
+      if (success) {
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Message marked as read.'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to mark message as read.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error marking message as read: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showResponseDialog(Map<String, dynamic> message) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final responseController = TextEditingController(
+      text: message['adminResponse'],
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        title: Text('Respond to ${message['name']}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: responseController,
+                decoration: InputDecoration(
+                  labelText: 'Your Response',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF3C3C3C) : Colors.grey[50],
+                ),
+                maxLines: 5,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final response = responseController.text.trim();
+              if (response.isNotEmpty) {
+                try {
+                  final dataService = DataService();
+                  final success = await dataService.updateContactMessage(
+                    message['id'],
+                    {'adminResponse': response},
+                  );
+                  if (success) {
+                    await _loadData();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Response sent successfully!'),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Failed to send response.'),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Error sending response: ${e.toString()}',
+                        ),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Response cannot be empty.'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Send Response'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteContactMessage(int messageId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: const Text(
+          'Are you sure you want to delete this contact message? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final dataService = DataService();
+        final success = await dataService.deleteContactMessage(messageId);
+        if (success) {
+          await _loadData();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Contact message deleted successfully.'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to delete contact message.'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting contact message: ${e.toString()}'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
   }
 }

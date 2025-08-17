@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'main.dart' show UserSession, NavigationUtils;
+
 import 'services/data_service.dart';
 import 'session_manager.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'main.dart' show UserSession, AppUtils, NavigationUtils;
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -11,21 +11,61 @@ class SignupPage extends StatefulWidget {
   State<SignupPage> createState() => _SignupPageState();
 }
 
-class _SignupPageState extends State<SignupPage> {
+class _SignupPageState extends State<SignupPage> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _bloodGroupController = TextEditingController();
   final _ageController = TextEditingController();
   final _contactController = TextEditingController();
   final _addressController = TextEditingController();
-
+  String _userType = 'Donor';
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  String _selectedUserType = 'Donor';
-  String _selectedBloodGroup = 'A+';
+
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeDatabase();
+    _setupAnimations();
+  }
+
+  Future<void> _initializeDatabase() async {
+    try {
+      debugPrint('🔧 Initializing database for signup page...');
+      await DataService.initializeDatabase();
+      debugPrint('✅ Database initialized successfully for signup');
+    } catch (e) {
+      debugPrint('❌ Database initialization failed: $e');
+      if (mounted) {
+        AppUtils.showSnackBar(
+          context,
+          'Database initialization failed: $e',
+          isError: true,
+        );
+      }
+    }
+  }
+
+  void _setupAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
 
   @override
   void dispose() {
@@ -33,10 +73,32 @@ class _SignupPageState extends State<SignupPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _bloodGroupController.dispose();
     _ageController.dispose();
     _contactController.dispose();
     _addressController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
+  }
+
+  // Help dialog method
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Help'),
+        content: const Text(
+          'If you need help creating an account, please contact our support team.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _signup() async {
@@ -52,8 +114,8 @@ class _SignupPageState extends State<SignupPage> {
     debugPrint('📝 Form data:');
     debugPrint('  Name: ${_nameController.text.trim()}');
     debugPrint('  Email: ${_emailController.text.trim()}');
-    debugPrint('  User Type: $_selectedUserType');
-    debugPrint('  Blood Group: $_selectedBloodGroup');
+    debugPrint('  User Type: $_userType');
+    debugPrint('  Blood Group: ${_bloodGroupController.text}');
     debugPrint('  Age: ${_ageController.text}');
     debugPrint('  Contact: ${_contactController.text.trim()}');
     debugPrint('  Address: ${_addressController.text.trim()}');
@@ -66,19 +128,24 @@ class _SignupPageState extends State<SignupPage> {
 
       // Check if email already exists
       debugPrint(
-          '🔍 Checking if email exists: ${_emailController.text.trim()}');
-      final existingUser =
-          await dataService.getUserByEmail(_emailController.text.trim());
+        '🔍 Checking if email exists: ${_emailController.text.trim()}',
+      );
+      final existingUser = await dataService.getUserByEmail(
+        _emailController.text.trim(),
+      );
       if (existingUser != null) {
         debugPrint('❌ Email already exists');
         if (!mounted) return;
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Email already registered. Please use a different email or login.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Email already registered. Please use a different email or login.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
         return;
       }
 
@@ -89,15 +156,16 @@ class _SignupPageState extends State<SignupPage> {
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'password': _passwordController.text,
-        'userType': _selectedUserType,
-        'bloodGroup': _selectedBloodGroup,
+        'userType': _userType,
+        'bloodGroup': _bloodGroupController.text,
         'age': int.tryParse(_ageController.text) ?? 0,
         'contactNumber': _contactController.text.trim(),
         'address': _addressController.text.trim(),
       };
 
       debugPrint(
-          '📝 User data prepared: ${newUser['name']} (${newUser['email']})');
+        '📝 User data prepared: ${newUser['name']} (${newUser['email']})',
+      );
       debugPrint('📝 User type: ${newUser['userType']}');
       debugPrint('📝 Blood group: ${newUser['bloodGroup']}');
 
@@ -106,12 +174,14 @@ class _SignupPageState extends State<SignupPage> {
       if (success) {
         debugPrint('✅ User created successfully');
         // Get the created user
-        final user =
-            await dataService.getUserByEmail(_emailController.text.trim());
+        final user = await dataService.getUserByEmail(
+          _emailController.text.trim(),
+        );
 
         if (user != null) {
           debugPrint(
-              '✅ Retrieved created user: ${user['name']} (ID: ${user['id']})');
+            '✅ Retrieved created user: ${user['name']} (ID: ${user['id']})',
+          );
           // Store session data
           await SessionManager.saveUserSession(
             userId: user['id'] ?? 0,
@@ -127,46 +197,56 @@ class _SignupPageState extends State<SignupPage> {
           UserSession.userName = user['name'];
 
           if (!mounted) return;
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Account created successfully! Welcome, ${user['name']}'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Account created successfully! Welcome, ${user['name']}',
+                ),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
           if (!mounted) return;
           NavigationUtils.navigateToUserPage(context, user['userType']);
         } else {
           debugPrint('❌ Failed to retrieve created user');
           if (!mounted) return;
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'User created but failed to retrieve. Please try logging in.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'User created but failed to retrieve. Please try logging in.',
+                ),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
         }
       } else {
         debugPrint('❌ Failed to create user');
         if (!mounted) return;
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to create account. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to create account. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('❌ Signup error: $e');
       debugPrint('❌ Error details: ${e.toString()}');
       if (!mounted) return;
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Signup error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Signup error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -179,10 +259,18 @@ class _SignupPageState extends State<SignupPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sign Up'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => NavigationUtils.navigateToHome(context),
-        ),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () {
+              _showHelpDialog();
+            },
+            tooltip: 'Help',
+          ),
+        ],
       ),
       body: Container(
         width: double.infinity,
@@ -237,11 +325,7 @@ class _SignupPageState extends State<SignupPage> {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.person_add,
-            size: 50,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.person_add, size: 50, color: Colors.white),
         ),
         const SizedBox(height: 20),
         const Text(
@@ -255,10 +339,7 @@ class _SignupPageState extends State<SignupPage> {
         const SizedBox(height: 8),
         const Text(
           'Join our blood bank community',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.white70,
-          ),
+          style: TextStyle(fontSize: 16, color: Colors.white70),
         ),
       ],
     );
@@ -282,8 +363,9 @@ class _SignupPageState extends State<SignupPage> {
               decoration: InputDecoration(
                 labelText: 'Full Name',
                 prefixIcon: const Icon(Icons.person, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -307,8 +389,9 @@ class _SignupPageState extends State<SignupPage> {
               decoration: InputDecoration(
                 labelText: 'Email',
                 prefixIcon: const Icon(Icons.email, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -319,8 +402,9 @@ class _SignupPageState extends State<SignupPage> {
                 if (value == null || value.isEmpty) {
                   return 'Please enter your email';
                 }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                    .hasMatch(value)) {
+                if (!RegExp(
+                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                ).hasMatch(value)) {
                   return 'Please enter a valid email';
                 }
                 return null;
@@ -330,12 +414,13 @@ class _SignupPageState extends State<SignupPage> {
 
             // User Type Dropdown
             DropdownButtonFormField<String>(
-              value: _selectedUserType,
+              initialValue: _userType,
               decoration: InputDecoration(
                 labelText: 'User Type',
                 prefixIcon: const Icon(Icons.category, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -347,37 +432,31 @@ class _SignupPageState extends State<SignupPage> {
                 DropdownMenuItem(value: 'Receiver', child: Text('Receiver')),
               ],
               onChanged: (value) {
-                setState(() => _selectedUserType = value!);
+                setState(() => _userType = value!);
               },
             ),
             const SizedBox(height: 16),
 
             // Blood Group Dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedBloodGroup,
+            TextFormField(
+              controller: _bloodGroupController,
               decoration: InputDecoration(
                 labelText: 'Blood Group',
                 prefixIcon: const Icon(Icons.bloodtype, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
               ),
-              dropdownColor: const Color(0xFF1A237E),
               style: const TextStyle(color: Colors.white),
-              items: const [
-                DropdownMenuItem(value: 'A+', child: Text('A+')),
-                DropdownMenuItem(value: 'A-', child: Text('A-')),
-                DropdownMenuItem(value: 'B+', child: Text('B+')),
-                DropdownMenuItem(value: 'B-', child: Text('B-')),
-                DropdownMenuItem(value: 'AB+', child: Text('AB+')),
-                DropdownMenuItem(value: 'AB-', child: Text('AB-')),
-                DropdownMenuItem(value: 'O+', child: Text('O+')),
-                DropdownMenuItem(value: 'O-', child: Text('O-')),
-              ],
-              onChanged: (value) {
-                setState(() => _selectedBloodGroup = value!);
+              keyboardType: TextInputType.text,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select a blood group';
+                }
+                return null;
               },
             ),
             const SizedBox(height: 16),
@@ -387,10 +466,13 @@ class _SignupPageState extends State<SignupPage> {
               controller: _ageController,
               decoration: InputDecoration(
                 labelText: 'Age',
-                prefixIcon:
-                    const Icon(Icons.calendar_today, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(
+                  Icons.calendar_today,
+                  color: Colors.white70,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -416,8 +498,9 @@ class _SignupPageState extends State<SignupPage> {
               decoration: InputDecoration(
                 labelText: 'Contact Number',
                 prefixIcon: const Icon(Icons.phone, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -438,10 +521,13 @@ class _SignupPageState extends State<SignupPage> {
               controller: _addressController,
               decoration: InputDecoration(
                 labelText: 'Address',
-                prefixIcon:
-                    const Icon(Icons.location_on, color: Colors.white70),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(
+                  Icons.location_on,
+                  color: Colors.white70,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -471,8 +557,9 @@ class _SignupPageState extends State<SignupPage> {
                     setState(() => _obscurePassword = !_obscurePassword);
                   },
                 ),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -505,12 +592,14 @@ class _SignupPageState extends State<SignupPage> {
                     color: Colors.white70,
                   ),
                   onPressed: () {
-                    setState(() =>
-                        _obscureConfirmPassword = !_obscureConfirmPassword);
+                    setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                    );
                   },
                 ),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.1),
                 labelStyle: const TextStyle(color: Colors.white70),
@@ -576,10 +665,7 @@ class _SignupPageState extends State<SignupPage> {
           children: [
             const Text(
               'Already have an account? ',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
             TextButton(
               onPressed: () => NavigationUtils.navigateToLogin(context),
@@ -606,18 +692,11 @@ class _SignupPageState extends State<SignupPage> {
           ),
           child: const Column(
             children: [
-              Icon(
-                Icons.info_outline,
-                color: Colors.white70,
-                size: 24,
-              ),
+              Icon(Icons.info_outline, color: Colors.white70, size: 24),
               SizedBox(height: 8),
               Text(
                 'By signing up, you agree to our terms and conditions',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ],

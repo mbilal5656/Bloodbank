@@ -17,13 +17,22 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final currentTheme = ThemeManager.currentThemeData;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+        backgroundColor: currentTheme.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () {
+              _showHelpDialog();
+            },
+            tooltip: 'Help',
+          ),
+        ],
       ),
       body: Container(
         width: double.infinity,
@@ -70,11 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.settings,
-            size: 40,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.settings, size: 40, color: Colors.white),
         ),
         const SizedBox(height: 20),
         const Text(
@@ -88,10 +93,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 8),
         const Text(
           'Customize your app experience',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.white70,
-          ),
+          style: TextStyle(fontSize: 16, color: Colors.white70),
         ),
       ],
     );
@@ -188,7 +190,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 'Spanish',
                 'French',
                 'German',
-                'Chinese'
+                'Chinese',
               ],
               onChanged: (value) {
                 setState(() => _language = value!);
@@ -212,13 +214,7 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: 'Get help and find answers',
               icon: Icons.help,
               onTap: () {
-                // TODO: Implement help functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Help functionality coming soon!'),
-                    backgroundColor: Colors.blue,
-                  ),
-                );
+                _showHelpAndFAQDialog();
               },
             ),
             _buildActionTile(
@@ -257,13 +253,7 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: 'Read our privacy policy',
               icon: Icons.privacy_tip,
               onTap: () {
-                // TODO: Implement privacy policy
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Privacy policy coming soon!'),
-                    backgroundColor: Colors.blue,
-                  ),
-                );
+                _showPrivacyPolicyDialog();
               },
             ),
             _buildActionTile(
@@ -271,13 +261,7 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: 'Read our terms of service',
               icon: Icons.description,
               onTap: () {
-                // TODO: Implement terms of service
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Terms of service coming soon!'),
-                    backgroundColor: Colors.blue,
-                  ),
-                );
+                _showTermsOfServiceDialog();
               },
             ),
             _buildActionTile(
@@ -307,8 +291,9 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           );
                         },
-                        style:
-                            TextButton.styleFrom(foregroundColor: Colors.red),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
                         child: const Text('Clear'),
                       ),
                     ],
@@ -389,15 +374,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         trailing: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: Colors.white,
+          activeThumbColor: Colors.white,
           activeTrackColor: Colors.white.withValues(alpha: 0.3),
           inactiveThumbColor: Colors.white70,
           inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
@@ -429,10 +411,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         trailing: DropdownButton<String>(
           value: value,
@@ -441,10 +420,7 @@ class _SettingsPageState extends State<SettingsPage> {
           style: const TextStyle(color: Colors.white),
           underline: Container(),
           items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            );
+            return DropdownMenuItem<String>(value: item, child: Text(item));
           }).toList(),
         ),
       ),
@@ -474,10 +450,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         trailing: const Icon(
           Icons.arrow_forward_ios,
@@ -491,7 +464,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildThemeTile() {
     final currentTheme = ThemeManager.currentThemeData;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
@@ -509,10 +482,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         subtitle: Text(
           'Current: ${currentTheme.name}',
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -537,6 +507,415 @@ class _SettingsPageState extends State<SettingsPage> {
         onTap: () {
           Navigator.pushNamed(context, '/theme_selection');
         },
+      ),
+    );
+  }
+
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Help & Support'),
+        content: const Text(
+          'If you need assistance, please contact our support team or visit our FAQ section.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showHelpAndFAQDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A237E),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.help_outline,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Help & FAQ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHelpSection(
+                        title: 'Getting Started',
+                        icon: Icons.play_circle_outline,
+                        items: [
+                          'How to create an account',
+                          'How to log in and out',
+                          'Understanding the dashboard',
+                          'Navigating the app',
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildHelpSection(
+                        title: 'Blood Donation',
+                        icon: Icons.volunteer_activism,
+                        items: [
+                          'How to register as a donor',
+                          'Blood donation process',
+                          'Donation eligibility requirements',
+                          'Donation history tracking',
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildHelpSection(
+                        title: 'Blood Requests',
+                        icon: Icons.bloodtype,
+                        items: [
+                          'How to request blood',
+                          'Request status tracking',
+                          'Emergency blood requests',
+                          'Request approval process',
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildHelpSection(
+                        title: 'Account Management',
+                        icon: Icons.person_outline,
+                        items: [
+                          'Updating profile information',
+                          'Changing password',
+                          'Notification preferences',
+                          'Privacy settings',
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildHelpSection(
+                        title: 'Support & Contact',
+                        icon: Icons.support_agent,
+                        items: [
+                          'Email: support@bloodbank.com',
+                          'Phone: +1 (555) 123-4567',
+                          'Live chat available 24/7',
+                          'Response time: Within 2 hours',
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHelpSection({
+    required String title,
+    required IconData icon,
+    required List<String> items,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: ExpansionTile(
+        leading: Icon(icon, color: const Color(0xFF1A237E)),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        children: items
+            .map(
+              (item) => Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.arrow_right, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(item, style: const TextStyle(fontSize: 14)),
+                    ),
+                  ],
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  void _showPrivacyPolicyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A237E),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.privacy_tip,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Privacy Policy',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildPolicySection(
+                        title: 'Information We Collect',
+                        content:
+                            'We collect personal information such as your name, email address, blood type, and contact information when you register for our service.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPolicySection(
+                        title: 'How We Use Your Information',
+                        content:
+                            'Your information is used to facilitate blood donation matching, manage your account, and provide customer support. We do not sell or share your personal information with third parties.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPolicySection(
+                        title: 'Data Security',
+                        content:
+                            'We implement industry-standard security measures to protect your personal information. All data is encrypted and stored securely.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPolicySection(
+                        title: 'Your Rights',
+                        content:
+                            'You have the right to access, update, or delete your personal information at any time. You can also opt out of certain communications.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPolicySection(
+                        title: 'Contact Us',
+                        content:
+                            'If you have any questions about our privacy policy, please contact us at privacy@bloodbank.com',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPolicySection({required String title, required String content}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Color(0xFF1A237E),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsOfServiceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A237E),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.description, color: Colors.white, size: 28),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Terms of Service',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTermsSection(
+                        title: 'Acceptance of Terms',
+                        content: 'By using our blood bank management system, you agree to be bound by these terms and conditions. If you do not agree to these terms, please do not use our service.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermsSection(
+                        title: 'Service Description',
+                        content: 'Our service facilitates blood donation matching between donors and recipients. We provide a platform for blood banks, hospitals, and individuals to manage blood inventory and requests.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermsSection(
+                        title: 'User Responsibilities',
+                        content: 'Users are responsible for providing accurate information, maintaining the security of their accounts, and complying with all applicable laws and regulations related to blood donation.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermsSection(
+                        title: 'Prohibited Activities',
+                        content: 'Users may not use our service for illegal purposes, provide false information, or attempt to gain unauthorized access to our systems.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermsSection(
+                        title: 'Limitation of Liability',
+                        content: 'We are not liable for any damages arising from the use of our service, including but not limited to medical complications or errors in blood matching.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermsSection(
+                        title: 'Changes to Terms',
+                        content: 'We reserve the right to modify these terms at any time. Users will be notified of significant changes via email or in-app notifications.',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTermsSection({
+    required String title,
+    required String content,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Color(0xFF1A237E),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+        ],
       ),
     );
   }

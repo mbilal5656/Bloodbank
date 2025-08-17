@@ -25,29 +25,22 @@ class _SplashScreenState extends State<SplashScreen>
     debugPrint('Splash screen: Initializing...');
 
     _animationController = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 500), // Faster animation
       vsync: this,
     );
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 400), // Faster fade
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.elasticOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
 
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeIn,
-    ));
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
 
     debugPrint('Splash screen: Starting animation...');
     _startAnimation();
@@ -57,12 +50,30 @@ class _SplashScreenState extends State<SplashScreen>
     if (_isDisposed) return;
 
     try {
-      await _animationController.forward();
-      if (_isDisposed) return;
-      await _fadeController.forward();
+      // Start animations immediately
+      _animationController.forward();
+      _fadeController.forward();
+
+      // Wait for animations to complete (should take ~500ms)
+      await Future.wait([
+        _animationController.forward(),
+        _fadeController.forward(),
+      ]);
+
       if (_isDisposed) return;
 
-      // Add a timeout to prevent getting stuck
+      // Calculate remaining time to ensure total 5 seconds
+      final animationDuration = Duration(milliseconds: 500);
+      final remainingTime = const Duration(seconds: 5) - animationDuration;
+
+      // Wait for remaining time to complete 5 seconds total
+      if (remainingTime.isNegative == false) {
+        await Future.delayed(remainingTime);
+      }
+
+      if (_isDisposed) return;
+
+      // Now check user session
       _checkUserSessionWithTimeout();
     } catch (e) {
       debugPrint('Error in animation: $e');
@@ -76,13 +87,14 @@ class _SplashScreenState extends State<SplashScreen>
     if (_isDisposed) return;
 
     try {
-      debugPrint('🔄 Splash screen: Starting session check with timeout...');
-      // Set a timeout of 5 seconds (reduced from 8)
+      debugPrint('🔄 Splash screen: Starting session check...');
+      // Set a timeout of 2 seconds for faster response
       final result = await _checkUserSession().timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 2),
         onTimeout: () {
           debugPrint(
-              '⏰ Splash screen: Session check timed out, navigating to home');
+            '⏰ Splash screen: Session check timed out, navigating to home',
+          );
           return 'timeout';
         },
       );
@@ -96,7 +108,7 @@ class _SplashScreenState extends State<SplashScreen>
         }
       }
     } catch (e) {
-      debugPrint('❌ Splash screen: Error in session check with timeout: $e');
+      debugPrint('❌ Splash screen: Error in session check: $e');
       if (!_isDisposed && mounted && context.mounted) {
         debugPrint('🚀 Splash screen: Navigating to home due to error');
         NavigationUtils.navigateToHome(context);
@@ -114,13 +126,19 @@ class _SplashScreenState extends State<SplashScreen>
       try {
         if (!kIsWeb) {
           debugPrint('🔍 Verifying database connection...');
-          final verificationResult = await DatabaseVerification.verifyDatabaseConnection();
-          
-          if (verificationResult['status'] == 'success') {
-            debugPrint('✅ Database verification successful: ${verificationResult['message']}');
-          } else {
-            debugPrint('⚠️ Database verification failed: ${verificationResult['error']}');
-          }
+          // Run database verification in background to avoid blocking
+          Future.microtask(() async {
+            try {
+              final verificationResult = await DatabaseVerification.verifyDatabaseConnection();
+              if (verificationResult['status'] == 'success') {
+                debugPrint('✅ Database verification successful: ${verificationResult['message']}');
+              } else {
+                debugPrint('⚠️ Database verification failed: ${verificationResult['error']}');
+              }
+            } catch (e) {
+              debugPrint('⚠️ Database verification error: $e');
+            }
+          });
         }
       } catch (e) {
         debugPrint('⚠️ Database initialization failed, continuing anyway: $e');
@@ -128,7 +146,8 @@ class _SplashScreenState extends State<SplashScreen>
 
       final sessionData = await SessionManager.getSessionData();
       debugPrint(
-          'Splash screen: Session data received: ${sessionData.isNotEmpty}');
+        'Splash screen: Session data received: ${sessionData.isNotEmpty}',
+      );
 
       if (_isDisposed || !mounted) {
         debugPrint('Splash screen: Widget not mounted, returning');
@@ -143,17 +162,17 @@ class _SplashScreenState extends State<SplashScreen>
         UserSession.userType = sessionData['userType'] ?? '';
         UserSession.userName = sessionData['userName'] ?? '';
 
-        // Reduced delay
-        await Future.delayed(const Duration(milliseconds: 300));
-
+        // Removed delay for faster navigation
         if (!_isDisposed && mounted && context.mounted) {
           NavigationUtils.navigateToUserPage(
-              context, UserSession.userType ?? 'admin');
+            context,
+            UserSession.userType ?? 'admin',
+          );
         }
       } else {
         // No session, go to home page
         debugPrint('Splash screen: No session found, navigating to home');
-        await Future.delayed(const Duration(milliseconds: 300));
+        // Removed delay for faster navigation
 
         if (!_isDisposed && mounted && context.mounted) {
           NavigationUtils.navigateToHome(context);
@@ -162,8 +181,7 @@ class _SplashScreenState extends State<SplashScreen>
       return null;
     } catch (e) {
       debugPrint('Splash screen: Error checking session: $e');
-      // Reduced delay
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Removed delay for faster error recovery
 
       if (!_isDisposed && mounted && context.mounted) {
         debugPrint('Splash screen: Navigating to home due to error');
@@ -191,11 +209,7 @@ class _SplashScreenState extends State<SplashScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A237E),
-              Color(0xFF3949AB),
-              Color(0xFF5C6BC0),
-            ],
+            colors: [Color(0xFF1A237E), Color(0xFF3949AB), Color(0xFF5C6BC0)],
           ),
         ),
         child: SafeArea(
@@ -274,18 +288,13 @@ class _SplashScreenState extends State<SplashScreen>
                     SizedBox(height: 16),
                     Text(
                       'Loading...',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 40),
-
-
 
               const Spacer(),
 
@@ -297,10 +306,7 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Text(
                     '© 2025 Blood Bank Management System\nVersion 1.0.0',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white54,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                 ),
               ),

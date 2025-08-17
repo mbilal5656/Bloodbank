@@ -9,8 +9,8 @@ class ThemeProvider extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
 
   ThemeData get currentTheme => ThemeManager.getThemeData();
-  
-  AppTheme get currentAppTheme => ThemeManager.currentThemeData;
+
+  AppTheme get currentAppTheme => ThemeManager.globalThemeData;
 
   ThemeData getThemeData(BuildContext context) {
     return ThemeManager.getThemeData();
@@ -37,6 +37,11 @@ class ThemeProvider extends ChangeNotifier {
     _isDarkMode = isDark;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_themeKey, _isDarkMode);
+    notifyListeners();
+  }
+
+  // Method to refresh theme when global theme changes
+  void refreshTheme() {
     notifyListeners();
   }
 }

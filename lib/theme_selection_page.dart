@@ -52,7 +52,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                     'Choose a theme that matches your style',
                     style: TextStyle(
                       fontSize: 14,
-                      color: currentTheme.textColor.withOpacity(0.7),
+                      color: currentTheme.textColor.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -127,7 +127,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -167,7 +167,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -208,7 +208,7 @@ class _ThemeSelectionPageState extends State<ThemeSelectionPage> {
                                     child: Container(
                                       height: 6,
                                       decoration: BoxDecoration(
-                                        color: theme.textColor.withOpacity(0.3),
+                                        color: theme.textColor.withValues(alpha: 0.3),
                                         borderRadius: BorderRadius.circular(3),
                                       ),
                                     ),

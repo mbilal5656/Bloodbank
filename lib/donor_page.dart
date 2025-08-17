@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'notification_helper.dart';
+
 import 'main.dart' show UserSession, NavigationUtils;
 import 'services/data_service.dart';
-import 'theme/theme_provider.dart';
-import 'theme_manager.dart';
 
 class DonorPage extends StatefulWidget {
   const DonorPage({super.key});
@@ -20,8 +17,6 @@ class _DonorPageState extends State<DonorPage> {
   final _lastDonationController = TextEditingController();
   final _contactController = TextEditingController();
 
-  List<Map<String, dynamic>> _notifications = [];
-  int _unreadNotificationsCount = 0;
   bool _isEligible = false;
   String? _donationCode;
   String _selectedBloodGroup = 'A+';
@@ -29,7 +24,6 @@ class _DonorPageState extends State<DonorPage> {
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
   }
 
   @override
@@ -39,291 +33,6 @@ class _DonorPageState extends State<DonorPage> {
     _lastDonationController.dispose();
     _contactController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadNotifications() async {
-    try {
-      final notifications = await NotificationHelper.getNotificationsForUser(
-        UserSession.userId ?? 0,
-      );
-      final unreadCount = await NotificationHelper.getUnreadNotificationsCount(
-        UserSession.userId ?? 0,
-      );
-
-      setState(() {
-        _notifications = notifications;
-        _unreadNotificationsCount = unreadCount;
-      });
-    } catch (e) {
-      // Handle error silently
-    }
-  }
-
-  void _showNotificationsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Notifications'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 300,
-          child: _notifications.isEmpty
-              ? const Center(child: Text('No notifications available'))
-              : ListView.builder(
-                  itemCount: _notifications.length,
-                  itemBuilder: (context, index) {
-                    final notification = _notifications[index];
-                    final isRead = notification['isRead'] ?? false;
-                    final type = notification['type'] ?? 'info';
-
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: _getNotificationColor(type),
-                        child: Icon(
-                          _getNotificationIcon(type),
-                          color: Colors.white,
-                        ),
-                      ),
-                      title: Text(
-                        notification['title'] ?? '',
-                        style: TextStyle(
-                          fontWeight: isRead
-                              ? FontWeight.normal
-                              : FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(notification['message'] ?? ''),
-                      onTap: () {
-                        NotificationHelper.showNotificationDialog(
-                          context,
-                          notification['title'] ?? '',
-                          notification['message'] ?? '',
-                        );
-                        if (!isRead) {
-                          NotificationHelper.markNotificationAsRead(
-                            notification['id'],
-                          );
-                          _loadNotifications();
-                        }
-                      },
-                    );
-                  },
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showThemeSelector() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildThemeSelector(),
-    );
-  }
-
-  Widget _buildThemeSelector() {
-    final currentTheme = context.watch<ThemeProvider>().currentAppTheme;
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      decoration: BoxDecoration(
-        color: currentTheme.surfaceColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Handle bar
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Icon(Icons.palette, color: currentTheme.primaryColor),
-                const SizedBox(width: 12),
-                Text(
-                  'Choose Theme',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: currentTheme.textColor,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: currentTheme.textColor),
-                ),
-              ],
-            ),
-          ),
-
-          // Theme grid
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.85,
-                ),
-                itemCount: ThemeManager.themes.length,
-                itemBuilder: (context, index) {
-                  final themeKey = ThemeManager.availableThemes[index];
-                  final theme = ThemeManager.themes[themeKey]!;
-                  final isSelected = ThemeManager.currentTheme == themeKey;
-
-                  return GestureDetector(
-                    onTap: () async {
-                      await ThemeManager.changeTheme(themeKey);
-                      // Notify the theme provider to update
-                      context.read<ThemeProvider>().notifyListeners();
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Theme changed to ${theme.name}'),
-                          backgroundColor: theme.primaryColor,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: currentTheme.surfaceColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected
-                              ? theme.primaryColor
-                              : Colors.grey.shade300,
-                          width: isSelected ? 3 : 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          // Theme preview
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              gradient: LinearGradient(
-                                colors: [
-                                  theme.primaryColor,
-                                  theme.secondaryColor,
-                                  theme.accentColor,
-                                ],
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.bloodtype,
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            theme.name,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: currentTheme.textColor,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 4),
-                          if (isSelected)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.primaryColor,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Active',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // Bottom padding
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  Color _getNotificationColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'success':
-        return Colors.green;
-      case 'error':
-        return Colors.red;
-      case 'warning':
-        return Colors.orange;
-      case 'info':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getNotificationIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'success':
-        return Icons.check_circle;
-      case 'error':
-        return Icons.error;
-      case 'warning':
-        return Icons.warning;
-      case 'info':
-        return Icons.info;
-      default:
-        return Icons.notifications;
-    }
   }
 
   Future<void> _checkEligibility() async {
@@ -425,11 +134,12 @@ class _DonorPageState extends State<DonorPage> {
             tooltip: 'Settings',
           ),
           IconButton(
-            icon: const Icon(Icons.palette),
-            onPressed: () => _showThemeSelector(),
-            tooltip: 'Change Theme',
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.pushNamed(context, '/notification_management');
+            },
+            tooltip: 'Notifications',
           ),
-          _buildNotificationButton(),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async => await NavigationUtils.logout(context),
@@ -465,36 +175,6 @@ class _DonorPageState extends State<DonorPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildNotificationButton() {
-    return Stack(
-      children: [
-        IconButton(
-          onPressed: _showNotificationsDialog,
-          icon: const Icon(Icons.notifications),
-          tooltip: 'Notifications',
-        ),
-        if (_unreadNotificationsCount > 0)
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
-              child: Text(
-                '$_unreadNotificationsCount',
-                style: const TextStyle(color: Colors.white, fontSize: 8),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-      ],
     );
   }
 
@@ -553,7 +233,7 @@ class _DonorPageState extends State<DonorPage> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _selectedBloodGroup,
+                    initialValue: _selectedBloodGroup,
                     decoration: const InputDecoration(
                       labelText: 'Blood Group',
                       border: OutlineInputBorder(),

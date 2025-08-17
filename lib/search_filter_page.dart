@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+
 import 'services/data_service.dart';
+import 'theme_manager.dart';
 
 class SearchFilterPage extends StatefulWidget {
   const SearchFilterPage({super.key});
@@ -10,53 +11,20 @@ class SearchFilterPage extends StatefulWidget {
 }
 
 class _SearchFilterPageState extends State<SearchFilterPage> {
-  final DataService _dataService = DataService();
-  final TextEditingController _searchController = TextEditingController();
-
-  String _selectedCategory = 'blood_inventory';
-  String _selectedBloodGroup = 'All';
-  String _selectedStatus = 'All';
-  String _selectedUserType = 'All';
-
+  final _searchController = TextEditingController();
+  List<Map<String, dynamic>> _searchResults = [];
   List<Map<String, dynamic>> _allData = [];
-  List<Map<String, dynamic>> _filteredData = [];
-  bool _isLoading = true;
-
-  final List<String> _categories = [
-    'blood_inventory',
-    'donors',
-    'receivers',
-    'donations',
-    'requests',
-  ];
-
-  final List<String> _bloodGroups = [
-    'All',
-    'A+',
-    'A-',
-    'B+',
-    'B-',
-    'AB+',
-    'AB-',
-    'O+',
-    'O-',
-  ];
-
-  final List<String> _statuses = [
-    'All',
-    'Available',
-    'Reserved',
-    'Used',
-    'Expired',
-  ];
-
-  final List<String> _userTypes = ['All', 'Admin', 'Donor', 'Receiver'];
+  bool _isLoading = false;
+  String _selectedCategory = 'all';
+  String _selectedBloodGroup = 'all';
+  String _selectedStatus = 'all';
+  RangeValues _ageRange = const RangeValues(18, 65);
+  RangeValues _quantityRange = const RangeValues(0, 200);
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    _searchController.addListener(_filterData);
   }
 
   @override
@@ -67,152 +35,126 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-
     try {
-      debugPrint('🔍 Loading data for search and filter...');
+      final dataService = DataService();
+      final bloodInventory = await dataService.getAllBloodInventory();
+      final donations = await dataService.getAllDonations();
+      final requests = await dataService.getAllBloodRequests();
 
-      switch (_selectedCategory) {
-        case 'blood_inventory':
-          _allData = await _dataService.getAllBloodInventory();
-          break;
-        case 'donors':
-          final users = await _dataService.getAllUsers();
-          _allData = users
-              .where((user) => user['userType'] == 'Donor')
-              .toList();
-          break;
-        case 'receivers':
-          final users = await _dataService.getAllUsers();
-          _allData = users
-              .where((user) => user['userType'] == 'Receiver')
-              .toList();
-          break;
-        case 'donations':
-          _allData = await _dataService.getAllDonations();
-          break;
-        case 'requests':
-          _allData = await _dataService.getAllBloodRequests();
-          break;
-      }
+      _allData = [
+        ...bloodInventory.map(
+          (item) => {
+            ...item,
+            'category': 'blood_inventory',
+            'displayName': '${item['bloodGroup']} Blood',
+            'description': 'Quantity: ${item['quantity']} units',
+          },
+        ),
+        ...donations.map(
+          (item) => {
+            ...item,
+            'category': 'donations',
+            'displayName': 'Donation by ${item['donorName'] ?? 'Unknown'}',
+            'description': 'Blood Group: ${item['bloodGroup']}',
+          },
+        ),
+        ...requests.map(
+          (item) => {
+            ...item,
+            'category': 'blood_requests',
+            'displayName': 'Request by ${item['requesterName'] ?? 'Unknown'}',
+            'description': 'Blood Group: ${item['bloodGroup']}',
+          },
+        ),
+      ];
 
-      _filterData();
-      setState(() => _isLoading = false);
-      debugPrint('✅ Data loaded: ${_allData.length} items');
+      _searchResults = List.from(_allData);
     } catch (e) {
-      debugPrint('❌ Error loading data: $e');
+      debugPrint('Error loading data: $e');
+    } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  void _filterData() {
-    final searchTerm = _searchController.text.toLowerCase();
+  void _performSearch() {
+    final query = _searchController.text.toLowerCase();
+    List<Map<String, dynamic>> filteredData = _allData;
 
-    _filteredData = _allData.where((item) {
-      // Text search
-      bool matchesSearch = false;
-      if (searchTerm.isEmpty) {
-        matchesSearch = true;
-      } else {
-        // Search in relevant fields based on category
-        switch (_selectedCategory) {
-          case 'blood_inventory':
-            matchesSearch =
-                (item['bloodGroup']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false) ||
-                (item['status']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false) ||
-                (item['notes']?.toString().toLowerCase().contains(searchTerm) ??
-                    false);
-            break;
-          case 'donors':
-          case 'receivers':
-            matchesSearch =
-                (item['name']?.toString().toLowerCase().contains(searchTerm) ??
-                    false) ||
-                (item['email']?.toString().toLowerCase().contains(searchTerm) ??
-                    false) ||
-                (item['bloodGroup']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false) ||
-                (item['contactNumber']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false);
-            break;
-          case 'donations':
-            matchesSearch =
-                (item['donorName']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false) ||
-                (item['bloodGroup']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false) ||
-                (item['donationDate']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false);
-            break;
-          case 'requests':
-            matchesSearch =
-                (item['requesterName']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false) ||
-                (item['bloodGroup']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false) ||
-                (item['status']?.toString().toLowerCase().contains(
-                      searchTerm,
-                    ) ??
-                    false);
-            break;
-        }
+    // Apply category filter
+    if (_selectedCategory != 'all') {
+      filteredData = filteredData
+          .where((item) => item['category'] == _selectedCategory)
+          .toList();
+    }
+
+    // Apply blood group filter
+    if (_selectedBloodGroup != 'all') {
+      filteredData = filteredData
+          .where((item) => item['bloodGroup'] == _selectedBloodGroup)
+          .toList();
+    }
+
+    // Apply status filter
+    if (_selectedStatus != 'all') {
+      filteredData = filteredData
+          .where((item) => item['status'] == _selectedStatus)
+          .toList();
+    }
+
+    // Apply age range filter (for donations and requests)
+    filteredData = filteredData.where((item) {
+      if (item['age'] != null) {
+        final age = item['age'] as int;
+        return age >= _ageRange.start && age <= _ageRange.end;
       }
-
-      // Blood group filter
-      bool matchesBloodGroup =
-          _selectedBloodGroup == 'All' ||
-          (item['bloodGroup']?.toString() == _selectedBloodGroup);
-
-      // Status filter
-      bool matchesStatus =
-          _selectedStatus == 'All' ||
-          (item['status']?.toString() == _selectedStatus);
-
-      // User type filter
-      bool matchesUserType =
-          _selectedUserType == 'All' ||
-          (item['userType']?.toString() == _selectedUserType);
-
-      return matchesSearch &&
-          matchesBloodGroup &&
-          matchesStatus &&
-          matchesUserType;
+      return true;
     }).toList();
+
+    // Apply quantity range filter (for blood inventory)
+    filteredData = filteredData.where((item) {
+      if (item['quantity'] != null) {
+        final quantity = item['quantity'] as int;
+        return quantity >= _quantityRange.start &&
+            quantity <= _quantityRange.end;
+      }
+      return true;
+    }).toList();
+
+    // Apply text search
+    if (query.isNotEmpty) {
+      filteredData = filteredData.where((item) {
+        return item['displayName'].toLowerCase().contains(query) ||
+            item['description'].toLowerCase().contains(query) ||
+            (item['bloodGroup']?.toString().toLowerCase().contains(query) ??
+                false) ||
+            (item['donorName']?.toString().toLowerCase().contains(query) ??
+                false) ||
+            (item['requesterName']?.toString().toLowerCase().contains(query) ??
+                false);
+      }).toList();
+    }
+
+    setState(() {
+      _searchResults = filteredData;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+    final currentTheme = ThemeManager.currentThemeData;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Search & Filter'),
-        backgroundColor: Colors.red[700],
+        backgroundColor: currentTheme.primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-            tooltip: 'Refresh',
+            icon: const Icon(Icons.help_outline),
+            onPressed: () {
+              _showHelpDialog();
+            },
+            tooltip: 'Help',
           ),
         ],
       ),
@@ -243,20 +185,26 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
         children: [
           // Category Selector
           DropdownButtonFormField<String>(
-            value: _selectedCategory,
+            initialValue: _selectedCategory,
             decoration: const InputDecoration(
               labelText: 'Category',
               border: OutlineInputBorder(),
             ),
-            items: _categories.map((category) {
-              return DropdownMenuItem(
-                value: category,
-                child: Text(_getCategoryDisplayName(category)),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() => _selectedCategory = value!);
-              _loadData();
+            items: const [
+              DropdownMenuItem(value: 'all', child: Text('All Categories')),
+              DropdownMenuItem(
+                value: 'blood_inventory',
+                child: Text('Blood Inventory'),
+              ),
+              DropdownMenuItem(value: 'donations', child: Text('Donations')),
+              DropdownMenuItem(
+                value: 'blood_requests',
+                child: Text('Blood Requests'),
+              ),
+            ],
+            onChanged: (newValue) {
+              setState(() => _selectedCategory = newValue!);
+              _performSearch();
             },
           ),
 
@@ -273,7 +221,7 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         _searchController.clear();
-                        _filterData();
+                        _performSearch();
                       },
                     )
                   : null,
@@ -290,10 +238,20 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
                 child: _buildFilterDropdown(
                   'Blood Group',
                   _selectedBloodGroup,
-                  _bloodGroups,
-                  (value) {
-                    setState(() => _selectedBloodGroup = value!);
-                    _filterData();
+                  const [
+                    'all',
+                    'A+',
+                    'A-',
+                    'B+',
+                    'B-',
+                    'AB+',
+                    'AB-',
+                    'O+',
+                    'O-',
+                  ],
+                  (newValue) {
+                    setState(() => _selectedBloodGroup = newValue!);
+                    _performSearch();
                   },
                 ),
               ),
@@ -302,23 +260,80 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
                 child: _buildFilterDropdown(
                   'Status',
                   _selectedStatus,
-                  _statuses,
-                  (value) {
-                    setState(() => _selectedStatus = value!);
-                    _filterData();
+                  const ['all', 'Available', 'Reserved', 'Used', 'Expired'],
+                  (newValue) {
+                    setState(() => _selectedStatus = newValue!);
+                    _performSearch();
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Range Filters
+          Row(
+            children: [
               Expanded(
-                child: _buildFilterDropdown(
-                  'User Type',
-                  _selectedUserType,
-                  _userTypes,
-                  (value) {
-                    setState(() => _selectedUserType = value!);
-                    _filterData();
-                  },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Age Range: ${_ageRange.start.toInt()}-${_ageRange.end.toInt()}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    RangeSlider(
+                      values: _ageRange,
+                      min: 18,
+                      max: 65,
+                      divisions: 47,
+                      labels: RangeLabels(
+                        _ageRange.start.toInt().toString(),
+                        _ageRange.end.toInt().toString(),
+                      ),
+                      onChanged: (RangeValues values) {
+                        setState(() {
+                          _ageRange = values;
+                        });
+                        _performSearch();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quantity Range: ${_quantityRange.start.toInt()}-${_quantityRange.end.toInt()}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    RangeSlider(
+                      values: _quantityRange,
+                      min: 0,
+                      max: 200,
+                      divisions: 40,
+                      labels: RangeLabels(
+                        _quantityRange.start.toInt().toString(),
+                        _quantityRange.end.toInt().toString(),
+                      ),
+                      onChanged: (RangeValues values) {
+                        setState(() {
+                          _quantityRange = values;
+                        });
+                        _performSearch();
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -339,14 +354,14 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
                 Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Found ${_filteredData.length} results',
+                  'Found ${_searchResults.length} results',
                   style: TextStyle(
                     color: Colors.blue[700],
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const Spacer(),
-                if (_filteredData.isNotEmpty)
+                if (_searchResults.isNotEmpty)
                   TextButton(
                     onPressed: _exportResults,
                     child: const Text('Export'),
@@ -366,21 +381,22 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
     Function(String?) onChanged,
   ) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       items: options.map((option) {
-        return DropdownMenuItem(value: option, child: Text(option));
+        String displayText = option == 'all' ? 'All' : option;
+        return DropdownMenuItem(value: option, child: Text(displayText));
       }).toList(),
       onChanged: onChanged,
     );
   }
 
   Widget _buildResultsList() {
-    if (_filteredData.isEmpty) {
+    if (_searchResults.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -407,9 +423,9 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _filteredData.length,
+      itemCount: _searchResults.length,
       itemBuilder: (context, index) {
-        final item = _filteredData[index];
+        final item = _searchResults[index];
         return _buildResultCard(item, index);
       },
     );
@@ -420,7 +436,7 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       child: ListTile(
-        leading: _buildCategoryIcon(),
+        leading: _buildCategoryIcon(item),
         title: _buildItemTitle(item),
         subtitle: _buildItemSubtitle(item),
         trailing: _buildItemTrailing(item),
@@ -429,28 +445,20 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
     );
   }
 
-  Widget _buildCategoryIcon() {
+  Widget _buildCategoryIcon(Map<String, dynamic> item) {
     IconData iconData;
     Color iconColor;
 
-    switch (_selectedCategory) {
+    switch (item['category']) {
       case 'blood_inventory':
         iconData = Icons.bloodtype;
         iconColor = Colors.red;
-        break;
-      case 'donors':
-        iconData = Icons.person_add;
-        iconColor = Colors.green;
-        break;
-      case 'receivers':
-        iconData = Icons.person;
-        iconColor = Colors.blue;
         break;
       case 'donations':
         iconData = Icons.favorite;
         iconColor = Colors.pink;
         break;
-      case 'requests':
+      case 'blood_requests':
         iconData = Icons.medical_services;
         iconColor = Colors.orange;
         break;
@@ -460,130 +468,34 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
     }
 
     return CircleAvatar(
-      backgroundColor: iconColor.withOpacity(0.1),
+      backgroundColor: iconColor.withValues(alpha: 0.1),
       child: Icon(iconData, color: iconColor),
     );
   }
 
   Widget _buildItemTitle(Map<String, dynamic> item) {
-    switch (_selectedCategory) {
-      case 'blood_inventory':
-        return Text(
-          '${item['bloodGroup']} - ${item['quantity']} units',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        );
-      case 'donors':
-      case 'receivers':
-        return Text(
-          item['name'] ?? 'Unknown',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        );
-      case 'donations':
-        return Text(
-          '${item['donorName'] ?? 'Unknown'} - ${item['bloodGroup']}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        );
-      case 'requests':
-        return Text(
-          '${item['requesterName'] ?? 'Unknown'} - ${item['bloodGroup']}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        );
-      default:
-        return const Text('Unknown Item');
-    }
+    return Text(
+      item['displayName'] ?? 'Unknown Item',
+      style: const TextStyle(fontWeight: FontWeight.bold),
+    );
   }
 
   Widget _buildItemSubtitle(Map<String, dynamic> item) {
-    switch (_selectedCategory) {
-      case 'blood_inventory':
-        return Text('Status: ${item['status'] ?? 'Unknown'}');
-      case 'donors':
-      case 'receivers':
-        return Text('${item['email']} • ${item['bloodGroup']}');
-      case 'donations':
-        return Text('Date: ${_formatDate(item['donationDate'])}');
-      case 'requests':
-        return Text(
-          'Status: ${item['status']} • Date: ${_formatDate(item['requestDate'])}',
-        );
-      default:
-        return const Text('');
-    }
+    return Text(item['description'] ?? 'No description available');
   }
 
   Widget _buildItemTrailing(Map<String, dynamic> item) {
-    switch (_selectedCategory) {
-      case 'blood_inventory':
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _getStatusColor(item['status']).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            item['status'] ?? 'Unknown',
-            style: TextStyle(
-              color: _getStatusColor(item['status']),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        );
-      case 'donors':
-      case 'receivers':
-        return Text(
-          item['bloodGroup'] ?? 'N/A',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.red,
-          ),
-        );
-      case 'donations':
-        return Icon(Icons.favorite, color: Colors.pink[400]);
-      case 'requests':
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _getStatusColor(item['status']).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            item['status'] ?? 'Unknown',
-            style: TextStyle(
-              color: _getStatusColor(item['status']),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        );
-      default:
-        return const Icon(Icons.arrow_forward_ios, size: 16);
-    }
-  }
-
-  Color _getStatusColor(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'available':
-      case 'completed':
-        return Colors.green;
-      case 'reserved':
-      case 'pending':
-        return Colors.orange;
-      case 'used':
-      case 'cancelled':
-        return Colors.red;
-      case 'expired':
-        return Colors.grey;
-      default:
-        return Colors.grey;
-    }
+    return Text(
+      item['bloodGroup'] ?? 'N/A',
+      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+    );
   }
 
   void _showItemDetails(Map<String, dynamic> item) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('${_getCategoryDisplayName(_selectedCategory)} Details'),
+        title: Text('${item['displayName']} Details'),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -628,30 +540,21 @@ class _SearchFilterPageState extends State<SearchFilterPage> {
     );
   }
 
-  String _getCategoryDisplayName(String category) {
-    switch (category) {
-      case 'blood_inventory':
-        return 'Blood Inventory';
-      case 'donors':
-        return 'Donors';
-      case 'receivers':
-        return 'Receivers';
-      case 'donations':
-        return 'Donations';
-      case 'requests':
-        return 'Blood Requests';
-      default:
-        return category;
-    }
-  }
-
-  String _formatDate(String? dateString) {
-    if (dateString == null) return 'Unknown';
-    try {
-      final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return 'Invalid Date';
-    }
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Help'),
+        content: const Text(
+          'This page allows you to search and filter blood inventory, donations, and blood requests. Use the filters on the left to narrow down your search. You can search by category, blood group, status, age, and quantity. The search bar at the top will search across all available fields.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 }

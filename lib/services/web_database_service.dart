@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 class WebDatabaseService {
   static bool _isInitialized = false;
-  
+
   // In-memory storage for web
   static final Map<String, List<Map<String, dynamic>>> _storage = {
     'users': [],
@@ -126,7 +126,9 @@ class WebDatabaseService {
       final quantities = [150, 75, 120, 45, 60, 30, 180, 90];
 
       for (int i = 0; i < bloodGroups.length; i++) {
-        final existingInventory = await getBloodInventoryByGroup(bloodGroups[i]);
+        final existingInventory = await getBloodInventoryByGroup(
+          bloodGroups[i],
+        );
         if (existingInventory == null) {
           await insertBloodInventory({
             'id': i + 1,
@@ -155,9 +157,37 @@ class WebDatabaseService {
   // User operations
   static Future<List<Map<String, dynamic>>> getAllUsers() async {
     try {
-      return List.from(_storage['users']!);
+      final users = _storage['users']!;
+      debugPrint(
+        '🔍 WebDatabaseService: getAllUsers called, total users: ${users.length}',
+      );
+
+      // Filter only active users (isActive = 1)
+      final activeUsers = users.where((user) {
+        final isActive = user['isActive'];
+        debugPrint(
+          '🔍 WebDatabaseService: User ${user['id']} has isActive: $isActive (type: ${isActive.runtimeType})',
+        );
+        return isActive == 1;
+      }).toList();
+
+      debugPrint(
+        '✅ WebDatabaseService: Returning ${activeUsers.length} active users',
+      );
+      return activeUsers;
     } catch (e) {
       debugPrint('❌ Error getting all users: $e');
+      return [];
+    }
+  }
+
+  // Get all users including inactive
+  static Future<List<Map<String, dynamic>>>
+  getAllUsersIncludingInactive() async {
+    try {
+      return List.from(_storage['users']!);
+    } catch (e) {
+      debugPrint('❌ Error getting all users including inactive: $e');
       return [];
     }
   }
@@ -194,8 +224,32 @@ class WebDatabaseService {
 
   static Future<bool> insertUser(Map<String, dynamic> userData) async {
     try {
+      debugPrint(
+        '🔍 WebDatabaseService: insertUser called with data: $userData',
+      );
       final users = _storage['users']!;
-      users.add(Map.from(userData));
+
+      // Generate unique ID
+      int newId = 1;
+      if (users.isNotEmpty) {
+        newId =
+            users
+                .map((user) => user['id'] as int)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
+      }
+      debugPrint('🔍 WebDatabaseService: Generated new ID: $newId');
+
+      // Ensure required fields are set
+      final newUser = Map<String, dynamic>.from(userData);
+      newUser['id'] = newId;
+      newUser['isActive'] = 1;
+      newUser['createdAt'] = DateTime.now().toIso8601String();
+      newUser['updatedAt'] = DateTime.now().toIso8601String();
+
+      debugPrint('🔍 WebDatabaseService: Final user data: $newUser');
+      users.add(newUser);
+      debugPrint('✅ WebDatabaseService: User inserted successfully');
       return true;
     } catch (e) {
       debugPrint('❌ Error inserting user: $e');
@@ -221,9 +275,34 @@ class WebDatabaseService {
 
   static Future<bool> deleteUser(int id) async {
     try {
+      debugPrint(
+        '🔍 WebDatabaseService: Attempting to delete user with ID: $id',
+      );
       final users = _storage['users']!;
-      users.removeWhere((user) => user['id'] == id);
-      return true;
+      debugPrint(
+        '🔍 WebDatabaseService: Total users in storage: ${users.length}',
+      );
+
+      for (int i = 0; i < users.length; i++) {
+        final user = users[i];
+        debugPrint(
+          '🔍 WebDatabaseService: Checking user ${user['id']} (type: ${user['id'].runtimeType})',
+        );
+
+        if (user['id'] == id) {
+          debugPrint(
+            '✅ WebDatabaseService: Found user to delete, setting isActive to 0',
+          );
+          // Soft delete: set isActive to 0 instead of removing the user
+          users[i]['isActive'] = 0;
+          users[i]['updatedAt'] = DateTime.now().toIso8601String();
+          debugPrint('✅ WebDatabaseService: User deleted successfully');
+          return true;
+        }
+      }
+
+      debugPrint('❌ WebDatabaseService: User with ID $id not found');
+      return false;
     } catch (e) {
       debugPrint('❌ Error deleting user: $e');
       return false;
@@ -240,7 +319,9 @@ class WebDatabaseService {
     }
   }
 
-  static Future<Map<String, dynamic>?> getBloodInventoryByGroup(String bloodGroup) async {
+  static Future<Map<String, dynamic>?> getBloodInventoryByGroup(
+    String bloodGroup,
+  ) async {
     try {
       final inventory = _storage['blood_inventory']!;
       for (final item in inventory) {
@@ -266,7 +347,10 @@ class WebDatabaseService {
     }
   }
 
-  static Future<bool> updateBloodInventory(int id, Map<String, dynamic> data) async {
+  static Future<bool> updateBloodInventory(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
     try {
       final inventory = _storage['blood_inventory']!;
       for (int i = 0; i < inventory.length; i++) {
@@ -279,6 +363,44 @@ class WebDatabaseService {
     } catch (e) {
       debugPrint('❌ Error updating blood inventory: $e');
       return false;
+    }
+  }
+
+  // Delete blood inventory item
+  static Future<bool> deleteBloodInventory(int id) async {
+    try {
+      final inventory = _storage['blood_inventory']!;
+      for (int i = 0; i < inventory.length; i++) {
+        if (inventory[i]['id'] == id) {
+          inventory.removeAt(i);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('❌ Error deleting blood inventory: $e');
+      return false;
+    }
+  }
+
+  // Search blood inventory
+  static Future<List<Map<String, dynamic>>> searchBloodInventory(
+    String query,
+  ) async {
+    try {
+      final inventory = _storage['blood_inventory']!;
+      final lowercaseQuery = query.toLowerCase();
+      return inventory.where((item) {
+        final bloodGroup = item['bloodGroup']?.toString().toLowerCase() ?? '';
+        final status = item['status']?.toString().toLowerCase() ?? '';
+        final notes = item['notes']?.toString().toLowerCase() ?? '';
+        return bloodGroup.contains(lowercaseQuery) ||
+            status.contains(lowercaseQuery) ||
+            notes.contains(lowercaseQuery);
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ Error searching blood inventory: $e');
+      return [];
     }
   }
 
@@ -346,7 +468,10 @@ class WebDatabaseService {
   }
 
   // Authentication
-  static Future<Map<String, dynamic>?> authenticateUser(String email, String password) async {
+  static Future<Map<String, dynamic>?> authenticateUser(
+    String email,
+    String password,
+  ) async {
     try {
       final user = await getUserByEmail(email);
       if (user != null) {
@@ -389,12 +514,12 @@ class WebDatabaseService {
   static Future<Map<String, dynamic>> testConnectivity() async {
     try {
       await initialize();
-      
+
       final users = await getAllUsers();
       final bloodInventory = await getAllBloodInventory();
       final donations = await getAllDonations();
       final requests = await getAllBloodRequests();
-      
+
       return {
         'status': 'success',
         'users': users.length,

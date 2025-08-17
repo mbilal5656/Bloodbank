@@ -1,6 +1,6 @@
 // Top-level build.gradle for Flutter project
 buildscript {
-    ext.kotlin_version = '1.9.10'
+    ext.kotlin_version = '2.1.0'
     repositories {
         google()
         mavenCentral()
@@ -18,14 +18,15 @@ allprojects {
     }
 }
 
-def newBuildDir = rootProject.layout.buildDirectory.dir("../../build").get()
-rootProject.layout.buildDirectory.set(newBuildDir)
+// Remove the problematic build directory redirection
+// def newBuildDir = rootProject.layout.buildDirectory.dir("../../build").get()
+// rootProject.layout.buildDirectory.set(newBuildDir)
 
-subprojects {
-    def newSubprojectBuildDir = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.set(newSubprojectBuildDir)
-    project.evaluationDependsOn(':app')
-}
+// subprojects {
+//     def newSubprojectBuildDir = newBuildDir.dir(project.name)
+//     project.layout.buildDirectory.set(newSubprojectBuildDir)
+//     project.evaluationDependsOn(':app')
+// }
 
 task clean(type: Delete) {
     delete rootProject.layout.buildDirectory
